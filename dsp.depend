@@ -1,0 +1,19 @@
+# depslib dependency file v1.0
+1601126093 source:c:\users\desmo\documents\new folder (2)\dsp\main.c
+	<stdbool.h>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
+1600600845 source:c:\users\desmo\documents\new folder (2)\dsp\untitled1.c
+	<stdbool.h>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
+1601126280 source:c:\users\desmo\documents\new folder (2)\dsp\dsp-project1\main.c
+	<stdbool.h>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
