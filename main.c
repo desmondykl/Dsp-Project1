@@ -21,11 +21,17 @@ struct Blocks {
     int size;
 };
 
+typedef struct link_list_head{
+    struct link_list *head;
+    struct link_list *last;
+}link_list_head;
+
 typedef struct link_list{
     Record *ptr;
 	struct link_list *nextItem;
-	struct link_list *Last;
 }link_list;
+
+
 
 typedef struct node {
     void ** pointers;
@@ -135,26 +141,27 @@ node * find_leaf(node * const root, float key, bool verbose,int *numOfAccess) {
 			printf("[");
 			for (i = 0; i < c->num_keys - 1; i++)
 				printf("%f ", c->keys[i]);
-			printf("%f] ", c->keys[i]);
+			printf("%f]\n", c->keys[i]);
 		}
 		i = 0;
 		while (i < c->num_keys) {
 			if (key >= c->keys[i]) i++;
 			else break;
 		}
-		if (verbose)
-			printf("%d ->\n", i);
+		//Key position commented first not sure need to print anot
+		//if (verbose)
+			//printf("%d \n", i);
         //go down the tree until it reach leaf then break;
         if(numOfAccess != NULL)
             (*numOfAccess)++;
-        //printf("%d",numOfAccess);
 		c = (node *)c->pointers[i];
 	}
+	//Leaf Node
 	if (verbose) {
 		printf("Leaf [");
 		for (i = 0; i < c->num_keys - 1; i++)
 			printf("%f ", c->keys[i]);
-		printf("%f] ->\n", c->keys[i]);
+		printf("%f] \n", c->keys[i]);
 	}
 	return c;
 }
@@ -593,84 +600,76 @@ link_list * find(node * root, float key, bool verbose, node ** leaf_out, int *nu
  * returned_keys and returned_pointers, and returns the number of
  * entries found.
  */
-float find_range(node * const root, float key_start, float key_end, bool verbose,
-		float returned_keys[], void * returned_pointers[], int *numOfAccess) {
-	int i, num_found;
+int find_range(node * const root, float key_start, float key_end, bool verbose,
+                 float returned_keys[], void * returned_pointers[], int *numOfAccess,int *numOfHead) {
+	int i, num_found,k;
 	num_found = 0;
-	node * n = find_leaf(root, key_start, verbose,numOfAccess);
+	k=0;
+	node * n = find_leaf(root, key_start, true,numOfAccess);
 	if (n == NULL) return 0;
-	for (i = 0; i < n->num_keys && n->keys[i] < key_start; i++) ;
+	//get position of pointer in the leaf node
+	for (i = 0; i < n->num_keys && n->keys[i] < key_start; i++);
 	if (i == n->num_keys) return 0;
+
+	int g=i;
+	node *print = n->pointers[order - 1];
+	while (print != NULL) {
+	    bool toPrint = false;
+        for (int g = 0; g < print->num_keys && print->keys[g] <= key_end; g++) {
+            toPrint=true;
+            break;
+        }
+        if(toPrint){
+            int a= 0;
+            printf("Leaf [");
+            for (a = 0; a < print->num_keys - 1; a++)
+                printf("%f ", print->keys[a]);
+            printf("%f] \n", print->keys[a]);
+        }
+        print = print->pointers[order - 1];
+
+	}
+
+
+	printf("tconst of record found : \n");
 	while (n != NULL) {
+        (*numOfAccess)++;
 		for (; i < n->num_keys && n->keys[i] <= key_end; i++) {
-			returned_keys[num_found] = n->keys[i];
-            int k = 0;
-            //returned_pointers[num_found] = n->pointers[i];
-            link_list *ll = n->pointers[i];
-            //printf("%s",ll->ptr->title);
-            returned_pointers[num_found] = ll->ptr;
-            while(ll->nextItem != NULL){
+			//returned_keys[num_found] = n->keys[i];
+            link_list_head *llhead = n->pointers[i];
+            link_list *ll = llhead->head;
+            returned_pointers[k] = llhead;
+            k++;
+            while(ll != NULL){
+                if(verbose)
+                    printf("%s|" , ll->ptr->title);
                 ll = ll->nextItem;
                 num_found++;
-                returned_keys[num_found] = n->keys[i];
-                returned_pointers[num_found] = ll->ptr;
+                //returned_keys[num_found] = n->keys[i];
+                //returned_pointers[num_found] = ll->ptr;
             }
-
-			num_found++;
 		}
 		n = n->pointers[order - 1];
 		i = 0;
 	}
+	(*numOfHead)=k;
+
 	return num_found;
 }
-/* Finds the record under a given key and prints an
- * appropriate message to stdout.
- */
-void find_and_print(node * const root, float key, bool verbose, int * numOfAccess) {
-    node * leaf = NULL;
-	Record * r = find(root, key, verbose, NULL,numOfAccess);
-	if (r == NULL)
-		printf("Record not found under key %d.\n", key);
-	else
-		printf("Record at %p -- key %f, value %s.\n",r, key, r->title);
-}
-
 
 /* Finds and prints the keys, pointers, and values within a range
  * of keys between key_start and key_end, including both bounds.
  */
-void find_and_print_range(node * const root, float key_start, float key_end,
-		bool verbose,int * numOfAccess) {
-	int i;
-	int array_size = 75000;
-	float returned_keys[array_size];
-	void * returned_pointers[array_size];
-	int num_found = find_range(root, key_start, key_end, verbose,returned_keys, returned_pointers,numOfAccess);
-	if (!num_found)
-		printf("None found.\n");
-	else {
-		for (i = 0; i < num_found; i++)
-			printf("Key: %f   Location: %p  Value: %s\n",returned_keys[i],returned_pointers[i],((Record *)returned_pointers[i])->title);
-	}
-}
 
-insertAsLink(link_list *duplicateKey,Record *ptr){
-    link_list *ll = duplicateKey;
-    if(ll->Last == NULL){
-        link_list *ll_new = (link_list *)malloc(sizeof(link_list));
-        ll_new->ptr = ptr;
-        ll_new->nextItem=NULL;
-        ll->nextItem = ll_new;
-        ll->Last = ll_new;
-    }
-    else{
-        link_list *ll_new = (link_list *)malloc(sizeof(link_list));
-        ll_new->ptr = ptr;
-        ll_new->nextItem=NULL;
-        ll->Last->nextItem = ll_new;
-        ll->Last = ll_new;
 
-    }
+insertAsLink(link_list_head *duplicateKey,Record *ptr){
+    link_list_head *ll = duplicateKey;
+
+    link_list *ll_new = (link_list *)malloc(sizeof(link_list));
+    ll_new->ptr = ptr;
+    ll_new->nextItem=NULL;
+    ll->last->nextItem=ll_new;
+    ll->last=ll_new;
 
 }
 
@@ -683,9 +682,13 @@ node *insert(node * root,float key,Record *ptr) {
         link_list *ll = (link_list *)malloc(sizeof(link_list));
         ll->ptr = ptr;
         ll->nextItem=NULL;
-        ll->Last=NULL;
         record_pointer=ll;
-		return start_new_tree(key, record_pointer);
+
+        link_list_head *llHead = (link_list_head *)malloc(sizeof(link_list_head));
+        llHead->head=ll;
+        llHead->last=ll;
+
+		return start_new_tree(key, llHead);
     }
 
     duplicateKey = find(root, key, false, NULL, NULL);
@@ -699,8 +702,12 @@ node *insert(node * root,float key,Record *ptr) {
     link_list *ll = (link_list *)malloc(sizeof(link_list));
 	ll->ptr = ptr;
 	ll->nextItem=NULL;
-	ll->Last=NULL;
     record_pointer=ll;
+
+    link_list_head *llHead = (link_list_head *)malloc(sizeof(link_list_head));
+    llHead->head=ll;
+    llHead->last=ll;
+    record_pointer = llHead;
     if (leaf->num_keys < order - 1) {
 		leaf = insert_into_leaf(leaf, key, record_pointer);
 		return root;
@@ -747,34 +754,116 @@ struct Blocks *insertData(struct Blocks *head, char *line){
         type++;
         token = strtok(NULL, "\t");
     }
-    root = insert(root, rating_key,record);
-    printf("%p \n",record);
     current->records[current->size] = *record;
-    printf("%p \n",current->records[0]);
+    root = insert(root, rating_key,&current->records[current->size]);
+
     current->size++;
     return current;
 }
-int calculateblockAccess (link_list *ll,struct Blocks *head){
+void printDataBlock(struct Blocks *Blocks){
+    for(int i = 0; i<4; i++){
+        if(i==0)
+            printf("+----------------+--------+--------+\n");
+        if(Blocks->records[i].vote<999)
+            printf("| %s\t | %0.2f\t  | %d\t   |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
+        else
+            printf("| %s\t | %0.2f\t  | %d   |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
+
+        if(i==3)
+            printf("+----------------+--------+--------+\n");
+    }
+    printf("\n");
+}
+int calculateblockAccessRange (float sKey,float eKey,struct Blocks *head, bool verbose,int numOfHead){
+    if(verbose)
+        printf("Data Block Content :\n");
+
+    int numofaccess=0;
+    struct Blocks *currentBlock = head;
+    while(currentBlock!=NULL){
+        for(int i = 0; i<4; i++){
+            Record *currentBlockRecord = &currentBlock->records[i];
+            if(currentBlockRecord->rating>= sKey && currentBlockRecord->rating<= eKey){
+                numofaccess++;
+                if(verbose)
+                    printDataBlock(currentBlockRecord);
+                break;
+            }
+        }
+        currentBlock = currentBlock->next;
+    }
+    return numofaccess;
+
+}
+
+int calculateblockAccess (link_list_head *ll,struct Blocks *head,bool verbose){
+
+    if(ll==NULL) return;
+    if(verbose)
+        printf("Data Block Content :\n");
+    //printf("%d",sizeof(link_list));
 
     struct Blocks *current = head;
-    Record *RecordCurrent = ll->ptr;
+    Record *RecordCurrent = ll->head->ptr;
+    Record *RecordLast = ll->last->ptr;
+    link_list *headLL = ll->head;
+    bool found = false;
+    int i = 0;
 
-    Record *t = &current->records[0];
+    while (current != NULL && !found) {
+        for(i = 0; i<4; i++){
+            Record *t = &current->records[i];
+            if(t==RecordCurrent){
+                found = true;
+                break;
+            }
+        }
+        if(found)
+            break;
+        current = current->next;
+    }
 
-    printf("%p %s ", current->records[0],t->title);
-    printf("%p %s ", RecordCurrent,RecordCurrent->title);
 
-    while (current != NULL) {
-        for(int i = 0; i<4; i++){
+    int blockaccess = 0;
+    found = false;
+    while (current != NULL && !found) {
+        for(i = 0; i<4; i++){
+            Record *t = &current->records[i];
+            if(t == ll->last->ptr){
+                if(verbose)
+                    printDataBlock(current);
+                blockaccess++;
+                found = true;
+                break;
+            }
+        }
+        if(found)
+            break;
 
-            //printf("%p",t);
-            //printf("%p\n",RecordCurrent);
-
+        bool match = false;
+        for(i = 0; i<4; i++){
+            Record *t = &current->records[i];
+            if(t==RecordCurrent){
+                if(!match){
+                    if(verbose)
+                        printDataBlock(current);
+                    blockaccess++;
+                    match = true;
+                }
+                headLL = headLL->nextItem;
+                RecordCurrent = headLL->ptr;
+            }
 
 
         }
+
         current = current->next;
     }
+
+    return blockaccess;
+
+
+
 }
 int main() {
 
@@ -801,7 +890,7 @@ int main() {
            presence would allow to handle lines longer that sizeof(line) */
         if(numberR>0){
             last = insertData(last,line);
-            if(numberR==1)break;
+            //if(numberR==6)break;
         }
         numberR++;
     }
@@ -827,35 +916,63 @@ int main() {
     //false = just print stats - numOfnodes
     //true = print whole tree;
     int h = height(root);
-    printf("\nB+ tree statistics\n");
+    printf("\nB+ Tree Statistics\n");
     printf("---------------------\n");
     printf("Parameter n = %d ", order);
     print_tree(root,false);
-    printf("Height of B+ tree : %d\n", h);
+    printf("Height of B+ Tree : %d\n", h);
     printf("---------------------\n\n");
 
 
+    //Retrieve for a single key
+    //Hard Code searching for key value 8 -> can change to let user type the value
+    printf("\nSingle Key Search Statistics\n");
+    printf("-----------------------------------\n");
     int numOfAccess = 0 ;
-    link_list *ll = find(root, 5.6, true, NULL,&numOfAccess);
-    int blockaccess = calculateblockAccess(ll,head);
-    printf("Number of access : %d \n",numOfAccess+1);
+    int numOfRecordFound = 0 ;
+    float Key = 8;
+    link_list_head *llhead = find(root, Key, true, NULL,&numOfAccess);
+    link_list *ll = llhead->head;
+    printf("Number of index block access : %d \n",numOfAccess+1);
     if(ll != NULL){
-        printf("tconst : ");
+        printf("tconst of record found : \n");
         while(ll!=NULL){
-            //printf("%s" , ll->ptr->title);
+            //hide result too long
+            //printf("%s|" , ll->ptr->title);
+            numOfRecordFound++;
             ll=ll->nextItem;
         }
     }
+    printf("Number of Record Found : %d \n",numOfRecordFound);
+    int blockaccess = calculateblockAccess(llhead,head,false);
+    printf("Number of data block access : %d \n",blockaccess);
+    printf("---------------------------------\n");
 
 
-
+    printf("\nRange of Key Search Statistics\n");
+    printf("---------------------------------\n");
+    //Retrieve for range of key
+    //Hard Code searching for range value -> can change to let user type the value
+    numOfAccess = 0;
+    blockaccess = 0;
+    int numOfHead = 0;
+    float returned_keys[50000];
+	void *returned_pointers[50000];
+	float sKey = 7;
+	float eKey = 9;
+	numOfRecordFound = find_range(root, sKey, eKey, false,returned_keys, returned_pointers,&numOfAccess,&numOfHead);
+    printf("Number of index block access : %d \n",numOfAccess+1);
+    printf("Number of Record Found : %d \n",numOfRecordFound);
+    blockaccess = calculateblockAccessRange(sKey, eKey,head,false,numOfHead);
+    printf("Number of data block access : %d \n",blockaccess);
+    printf("---------------------------------\n");
     fclose(fp);
     //if (line)
         //free(line);
     //exit(EXIT_SUCCESS);
 
     //find_and_print(root, 4.1, false);
-    //find_and_print_range(root, 8, 8,true,&numOfAccess);
+    //
 
 }
 
