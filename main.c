@@ -1,26 +1,33 @@
-// Searching on a B+ Tree in C
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Default order
-#define ORDER 3
+
+//CHANGE BLOCK SIZE HERE
+#define BLOCK 100
+
+
+#define MAXRECORD ((BLOCK/20)-1)
+//ORDER
+#define order (((BLOCK+4)/12)+1)
 
 // 1 row/record = 20 byte
 typedef struct record {
-   float rating ;
-   int   vote ;
-   char  title[12] ;
+   float rating ;       // 4 btye
+   int   vote ;         // 4 btye
+   char  title[12] ;    // 12 btye
 } Record;
+
 //Max 100
 struct Blocks {
-    Record records[4];
-    struct Blocks * next;
-    int size;
+    Record records[MAXRECORD];    // MAXRECORD*20 btye
+    struct Blocks * next; // 8 byte
+    int size;             // 4 btye
 };
 
+// Block of 100btye can only store 5 key in the linklist
+// 32 btye  + i(16)
 typedef struct link_list_head{
     struct link_list *head;
     struct link_list *last;
@@ -45,7 +52,9 @@ typedef struct node {
 
 node * insert_into_parent(node * root, node * left, float key, node * right);
 node * insert_into_node_after_splitting(node * root, node * parent,int left_index,float key, node * right);
-int order = 8;
+node * delete_entry(node * root, node * n, float key, void * pointer,int *numOfAccess);
+node * deleteIndex(node * root, float key,int *numOfAccess);
+
 node * queue = NULL;
 bool verbose_output = false;
 node *root = NULL;
@@ -135,13 +144,22 @@ node * find_leaf(node * const root, float key, bool verbose,int *numOfAccess) {
 		return root;
 	}
 	int i = 0;
+	int Counter = 0;
 	node * c = root;
+	int check= 0;
+	if(numOfAccess != NULL){
+         check = (*numOfAccess);
+	}
+
 	while (!c->is_leaf) {
 		if (verbose) {
-			printf("[");
+            if(Counter == 0)
+                printf("Root Node     : [");
+			else
+                printf("Internal Node : [");
 			for (i = 0; i < c->num_keys - 1; i++)
-				printf("%f ", c->keys[i]);
-			printf("%f]\n", c->keys[i]);
+				printf("%0.2f ", c->keys[i]);
+			printf("%0.2f]\n", c->keys[i]);
 		}
 		i = 0;
 		while (i < c->num_keys) {
@@ -155,13 +173,14 @@ node * find_leaf(node * const root, float key, bool verbose,int *numOfAccess) {
         if(numOfAccess != NULL)
             (*numOfAccess)++;
 		c = (node *)c->pointers[i];
+		Counter = Counter + 1;
 	}
 	//Leaf Node
 	if (verbose) {
-		printf("Leaf [");
+		printf("Leaf Node     : [");
 		for (i = 0; i < c->num_keys - 1; i++)
-			printf("%f ", c->keys[i]);
-		printf("%f] \n", c->keys[i]);
+			printf("%0.2f ", c->keys[i]);
+		printf("%0.2f] \n", c->keys[i]);
 	}
 	return c;
 }
@@ -480,10 +499,7 @@ node * dequeue(void) {
 	n->next = NULL;
 	return n;
 }
-/* Prints the bottom row of keys
- * of the tree (with their respective
- * pointers, if the verbose_output flag is set.
- */
+// CAN DELETE
 void print_leaves(node * const root) {
 	if (root == NULL) {
 		printf("Empty tree.\n");
@@ -511,7 +527,7 @@ void print_leaves(node * const root) {
 	printf("\n");
 }
 
-void print_tree(node * const root,bool printOutput) {
+void print_tree(node * const root,bool printOutput, int *numOfNode) {
 
 	node * n = NULL;
 	int i = 0;
@@ -524,26 +540,34 @@ void print_tree(node * const root,bool printOutput) {
 	}
 	queue = NULL;
 	enqueue(root);
-	int numberOfNode = 0;
-
+    if(printOutput)
+        printf("Root Node     : ");
 	while(queue != NULL) {
 		n = dequeue();
-		numberOfNode++;
+		(*numOfNode)++;
 		if (n->parent != NULL && n == n->parent->pointers[0]) {
 			new_rank = path_to_root(root, n);
 			if (new_rank != rank) {
 				rank = new_rank;
-				if(printOutput)
+				if(printOutput){
                     printf("\n");
+                    if(!n->is_leaf)
+                        printf("Internal Node : ");
+                    else
+                        printf("Leaf Node     : ");
+				}
 			}
 		}
+
 		if (verbose_output)
 			printf("(%p)", n);
 		for (i = 0; i < n->num_keys; i++) {
+            if(i==0)
+                printf("[");
 			if (verbose_output)
 				printf("%p ", n->pointers[i]);
 			if(printOutput)
-                printf("%0.1f ", n->keys[i]);
+                printf("%0.2f ", n->keys[i]);
 		}
 		if (!n->is_leaf)
 			for (i = 0; i <= n->num_keys; i++)
@@ -555,11 +579,8 @@ void print_tree(node * const root,bool printOutput) {
 				printf("%p ", n->pointers[n->num_keys]);
 		}
 		if(printOutput)
-            printf("| ");
+            printf("] ");
 	}
-	printf("\nNumber Of Nodes : %d", numberOfNode);
-	printf("\n");
-
 }
 
 /* Finds and returns the record to which
@@ -621,10 +642,11 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
         }
         if(toPrint){
             int a= 0;
-            printf("Leaf [");
+            printf("Leaf Node     : [");
             for (a = 0; a < print->num_keys - 1; a++)
-                printf("%f ", print->keys[a]);
-            printf("%f] \n", print->keys[a]);
+                printf("%0.2f ", print->keys[a]);
+            printf("%0.2f] \n", print->keys[a]);
+            (*numOfAccess)++;
         }
         print = print->pointers[order - 1];
 
@@ -633,7 +655,7 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
 
 	printf("tconst of record found : \n");
 	while (n != NULL) {
-        (*numOfAccess)++;
+
 		for (; i < n->num_keys && n->keys[i] <= key_end; i++) {
 			//returned_keys[num_found] = n->keys[i];
             link_list_head *llhead = n->pointers[i];
@@ -652,7 +674,7 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
 		n = n->pointers[order - 1];
 		i = 0;
 	}
-	(*numOfHead)=k;
+
 
 	return num_found;
 }
@@ -722,7 +744,7 @@ struct Blocks *insertData(struct Blocks *head, char *line){
     struct Blocks *current = head;
     struct Blocks *prev = NULL;
     while (current != NULL) {
-        if(current->size < 4)
+        if(current->size < MAXRECORD)
             break;
         prev = current;
         current = current->next;
@@ -761,7 +783,7 @@ struct Blocks *insertData(struct Blocks *head, char *line){
     return current;
 }
 void printDataBlock(struct Blocks *Blocks){
-    for(int i = 0; i<4; i++){
+    for(int i = 0; i<MAXRECORD; i++){
         if(i==0)
             printf("+----------------+--------+--------+\n");
         if(Blocks->records[i].vote<999)
@@ -781,7 +803,7 @@ int calculateblockAccessRange (float sKey,float eKey,struct Blocks *head, bool v
     int numofaccess=0;
     struct Blocks *currentBlock = head;
     while(currentBlock!=NULL){
-        for(int i = 0; i<4; i++){
+        for(int i = 0; i<MAXRECORD; i++){
             Record *currentBlockRecord = &currentBlock->records[i];
             if(currentBlockRecord->rating>= sKey && currentBlockRecord->rating<= eKey){
                 numofaccess++;
@@ -811,7 +833,7 @@ int calculateblockAccess (link_list_head *ll,struct Blocks *head,bool verbose){
     int i = 0;
 
     while (current != NULL && !found) {
-        for(i = 0; i<4; i++){
+        for(i = 0; i<MAXRECORD; i++){
             Record *t = &current->records[i];
             if(t==RecordCurrent){
                 found = true;
@@ -827,7 +849,7 @@ int calculateblockAccess (link_list_head *ll,struct Blocks *head,bool verbose){
     int blockaccess = 0;
     found = false;
     while (current != NULL && !found) {
-        for(i = 0; i<4; i++){
+        for(i = 0; i<MAXRECORD; i++){
             Record *t = &current->records[i];
             if(t == ll->last->ptr){
                 if(verbose)
@@ -841,7 +863,7 @@ int calculateblockAccess (link_list_head *ll,struct Blocks *head,bool verbose){
             break;
 
         bool match = false;
-        for(i = 0; i<4; i++){
+        for(i = 0; i<MAXRECORD; i++){
             Record *t = &current->records[i];
             if(t==RecordCurrent){
                 if(!match){
@@ -865,13 +887,338 @@ int calculateblockAccess (link_list_head *ll,struct Blocks *head,bool verbose){
 
 
 }
+
+node * remove_entry_from_node(node * n, float key, node * pointer) {
+
+	int i, num_pointers;
+
+	// Remove the key and shift other keys accordingly.
+	i = 0;
+	while (n->keys[i] != key)
+		i++;
+	for (++i; i < n->num_keys; i++)
+		n->keys[i - 1] = n->keys[i];
+
+	// Remove the pointer and shift other pointers accordingly.
+	// First determine number of pointers.
+	num_pointers = n->is_leaf ? n->num_keys : n->num_keys + 1;
+	i = 0;
+	while (n->pointers[i] != pointer)
+		i++;
+	for (++i; i < num_pointers; i++)
+		n->pointers[i - 1] = n->pointers[i];
+
+
+	// One key fewer.
+	n->num_keys--;
+
+	// Set the other pointers to NULL for tidiness.
+	// A leaf uses the last pointer to point to the next leaf.
+	if (n->is_leaf)
+		for (i = n->num_keys; i < order - 1; i++)
+			n->pointers[i] = NULL;
+	else
+		for (i = n->num_keys + 1; i < order; i++)
+			n->pointers[i] = NULL;
+
+	return n;
+}
+
+node * adjust_root(node * root) {
+
+	node * new_root;
+
+	/* Case: nonempty root.
+	 * Key and pointer have already been deleted,
+	 * so nothing to be done.
+	 */
+
+	if (root->num_keys > 0)
+		return root;
+
+	/* Case: empty root.
+	 */
+
+	// If it has a child, promote
+	// the first (only) child
+	// as the new root.
+
+	if (!root->is_leaf) {
+		new_root = root->pointers[0];
+		new_root->parent = NULL;
+	}
+
+	// If it is a leaf (has no children),
+	// then the whole tree is empty.
+
+	else
+		new_root = NULL;
+
+	free(root->keys);
+	free(root->pointers);
+	free(root);
+	return new_root;
+}
+
+int get_neighbor_index(node * n) {
+
+	int i;
+
+	/* Return the index of the key to the left
+	 * of the pointer in the parent pointing
+	 * to n.
+	 * If n is the leftmost child, this means
+	 * return -1.
+	 */
+	for (i = 0; i <= n->parent->num_keys; i++)
+		if (n->parent->pointers[i] == n)
+			return i - 1;
+
+	// Error state.
+	printf("Search for nonexistent pointer to node in parent.\n");
+	printf("Node:  %#lx\n", (unsigned long)n);
+	exit(EXIT_FAILURE);
+}
+
+node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index, float k_prime,int *numOfaccess) {
+
+	int i, j, neighbor_insertion_index, n_end;
+	node * tmp;
+
+	/* Swap neighbor with node if node is on the
+	 * extreme left and neighbor is to its right.
+	 */
+
+	if (neighbor_index == -1) {
+		tmp = n;
+		n = neighbor;
+		neighbor = tmp;
+	}
+
+	/* Starting point in the neighbor for copying
+	 * keys and pointers from n.
+	 * Recall that n and neighbor have swapped places
+	 * in the special case of n being a leftmost child.
+	 */
+
+	neighbor_insertion_index = neighbor->num_keys;
+
+	/* Case:  nonleaf node.
+	 * Append k_prime and the following pointer.
+	 * Append all pointers and keys from the neighbor.
+	 */
+
+	if (!n->is_leaf) {
+
+		/* Append k_prime.
+		 */
+
+		neighbor->keys[neighbor_insertion_index] = k_prime;
+		neighbor->num_keys++;
+
+
+		n_end = n->num_keys;
+
+		for (i = neighbor_insertion_index + 1, j = 0; j < n_end; i++, j++) {
+			neighbor->keys[i] = n->keys[j];
+			neighbor->pointers[i] = n->pointers[j];
+			neighbor->num_keys++;
+			n->num_keys--;
+		}
+
+		/* The number of pointers is always
+		 * one more than the number of keys.
+		 */
+
+		neighbor->pointers[i] = n->pointers[j];
+
+		/* All children must now point up to the same parent.
+		 */
+
+		for (i = 0; i < neighbor->num_keys + 1; i++) {
+			tmp = (node *)neighbor->pointers[i];
+			tmp->parent = neighbor;
+		}
+	}
+
+	/* In a leaf, append the keys and pointers of
+	 * n to the neighbor.
+	 * Set the neighbor's last pointer to point to
+	 * what had been n's right neighbor.
+	 */
+
+	else {
+		for (i = neighbor_insertion_index, j = 0; j < n->num_keys; i++, j++) {
+			neighbor->keys[i] = n->keys[j];
+			neighbor->pointers[i] = n->pointers[j];
+			neighbor->num_keys++;
+		}
+		neighbor->pointers[order - 1] = n->pointers[order - 1];
+	}
+
+	root = delete_entry(root, n->parent, k_prime, n,numOfaccess);
+	free(n->keys);
+	free(n->pointers);
+	free(n);
+	(*numOfaccess)++;
+	return root;
+}
+
+node * redistribute_nodes(node * root, node * n, node * neighbor, int neighbor_index,
+		int k_prime_index, float k_prime) {
+
+	int i;
+	node * tmp;
+
+	/* Case: n has a neighbor to the left.
+	 * Pull the neighbor's last key-pointer pair over
+	 * from the neighbor's right end to n's left end.
+	 */
+
+	if (neighbor_index != -1) {
+		if (!n->is_leaf)
+			n->pointers[n->num_keys + 1] = n->pointers[n->num_keys];
+		for (i = n->num_keys; i > 0; i--) {
+			n->keys[i] = n->keys[i - 1];
+			n->pointers[i] = n->pointers[i - 1];
+		}
+		if (!n->is_leaf) {
+			n->pointers[0] = neighbor->pointers[neighbor->num_keys];
+			tmp = (node *)n->pointers[0];
+			tmp->parent = n;
+			neighbor->pointers[neighbor->num_keys] = NULL;
+			n->keys[0] = k_prime;
+			n->parent->keys[k_prime_index] = neighbor->keys[neighbor->num_keys - 1];
+		}
+		else {
+			n->pointers[0] = neighbor->pointers[neighbor->num_keys - 1];
+			neighbor->pointers[neighbor->num_keys - 1] = NULL;
+			n->keys[0] = neighbor->keys[neighbor->num_keys - 1];
+			n->parent->keys[k_prime_index] = n->keys[0];
+		}
+	}
+
+	/* Case: n is the leftmost child.
+	 * Take a key-pointer pair from the neighbor to the right.
+	 * Move the neighbor's leftmost key-pointer pair
+	 * to n's rightmost position.
+	 */
+
+	else {
+		if (n->is_leaf) {
+			n->keys[n->num_keys] = neighbor->keys[0];
+			n->pointers[n->num_keys] = neighbor->pointers[0];
+			n->parent->keys[k_prime_index] = neighbor->keys[1];
+		}
+		else {
+			n->keys[n->num_keys] = k_prime;
+			n->pointers[n->num_keys + 1] = neighbor->pointers[0];
+			tmp = (node *)n->pointers[n->num_keys + 1];
+			tmp->parent = n;
+			n->parent->keys[k_prime_index] = neighbor->keys[0];
+		}
+		for (i = 0; i < neighbor->num_keys - 1; i++) {
+			neighbor->keys[i] = neighbor->keys[i + 1];
+			neighbor->pointers[i] = neighbor->pointers[i + 1];
+		}
+		if (!n->is_leaf)
+			neighbor->pointers[i] = neighbor->pointers[i + 1];
+	}
+
+	/* n now has one more key and one more pointer;
+	 * the neighbor has one fewer of each.
+	 */
+
+	n->num_keys++;
+	neighbor->num_keys--;
+
+	return root;
+}
+
+node * delete_entry(node * root, node * n, float key, void * pointer, int *numOfAccess) {
+
+	float min_keys;
+	node * neighbor;
+	int neighbor_index;
+	int k_prime_index;
+	float k_prime;
+	int capacity;
+
+	// Remove key and pointer from node.
+
+	n = remove_entry_from_node(n, key, pointer);
+
+	/* Case:  deletion from the root.
+	 */
+
+	if (n == root)
+		return adjust_root(root);
+
+
+	/* Case:  deletion from a node below the root.
+	 * (Rest of function body.)
+	 */
+
+	/* Determine minimum allowable size of node,
+	 * to be preserved after deletion.
+	 */
+
+	min_keys = n->is_leaf ? cut(order - 1) : cut(order) - 1;
+
+	/* Case:  node stays at or above minimum.
+	 * (The simple case.)
+	 */
+
+	if (n->num_keys >= min_keys)
+		return root;
+
+	/* Case:  node falls below minimum.
+	 * Either coalescence or redistribution
+	 * is needed.
+	 */
+
+	/* Find the appropriate neighbor node with which
+	 * to coalesce.
+	 * Also find the key (k_prime) in the parent
+	 * between the pointer to node n and the pointer
+	 * to the neighbor.
+	 */
+
+	neighbor_index = get_neighbor_index(n);
+	k_prime_index = neighbor_index == -1 ? 0 : neighbor_index;
+	k_prime = n->parent->keys[k_prime_index];
+	neighbor = neighbor_index == -1 ? n->parent->pointers[1] :
+		n->parent->pointers[neighbor_index];
+
+	capacity = n->is_leaf ? order : order - 1;
+
+	/* Coalescence. */
+	if (neighbor->num_keys + n->num_keys < capacity){
+		return coalesce_nodes(root, n, neighbor, neighbor_index, k_prime,numOfAccess);
+    }
+	/* Redistribution. */
+	else
+		return redistribute_nodes(root, n, neighbor, neighbor_index, k_prime_index, k_prime);
+}
+
+
+node * deleteIndex(node * root, float key,int *numOfAccess) {
+
+	node * key_leaf = NULL;
+	link_list_head * key_record = NULL;
+
+	key_record = find(root, key, false, &key_leaf,NULL);
+
+    /* CHANGE */
+
+	if (key_record != NULL && key_leaf != NULL) {
+		root = delete_entry(root, key_leaf, key, key_record,numOfAccess);
+	}
+	return root;
+}
+
+
 int main() {
-
-
-    struct Blocks block;
-    printf("Size of double data type : %d\n",sizeof(block));
-
-
     char line[256];
     FILE * fp;
     const char s[2] = "\t";
@@ -903,39 +1250,42 @@ int main() {
         NumberOfBlock++;
         current = current->next;
     }
+    fclose(fp);
     //float array[1070319];
 
     //Never include the index size not sure if need
-    printf("\nDatabase statistics\n");
+    printf("\n          DATABASE STATISTICS     \n");
     printf("+------------------------------------+\n");
-    printf("| The size of database = %d      |\n",sizeOfDb);
-    printf("| Number of Blocks     = %d        |\n",NumberOfBlock);
-    printf("| Number of records    = %d       |\n",numberR);
+    printf("| Size of a Block      = %d Btye    |\n",BLOCK);
+    printf("| The Size of Database : %d    |\n",sizeOfDb);
+    printf("| Number of Blocks     = %d\t     |\n",NumberOfBlock);
+    printf("| Number of Records    = %d     |\n",numberR);
     printf("+------------------------------------+\n\n");
 
     //false = just print stats - numOfnodes
     //true = print whole tree;
     int h = height(root);
-    printf("\nB+ Tree Statistics\n");
-    printf("---------------------\n");
-    printf("Parameter n = %d ", order);
-    print_tree(root,false);
-    printf("Height of B+ Tree : %d\n", h);
-    printf("---------------------\n\n");
-
+    int numberOfNode = 0;
+    printf("\n   B+ Tree STATISTICS\n");
+    printf("+----------------------+\n");
+    printf("| Parameter n      : %d |", order);
+    print_tree(root,false,&numberOfNode);
+    printf("\nNumber Of Nodes : %d\n", numberOfNode);
+    printf("| Height of B+ Tree: %d |\n", h);
+    printf("+----------------------+\n\n");
 
     //Retrieve for a single key
     //Hard Code searching for key value 8 -> can change to let user type the value
-    printf("\nSingle Key Search Statistics\n");
-    printf("-----------------------------------\n");
+    printf("\n        SINGLE KEY SEARCH STATISTICS \n");
+    printf("+----------------------------------------------+\n");
     int numOfAccess = 0 ;
     int numOfRecordFound = 0 ;
     float Key = 8;
     link_list_head *llhead = find(root, Key, true, NULL,&numOfAccess);
-    link_list *ll = llhead->head;
-    printf("Number of index block access : %d \n",numOfAccess+1);
-    if(ll != NULL){
-        printf("tconst of record found : \n");
+    printf("| Number of index block access : %d             |\n",numOfAccess+1);
+    if(llhead != NULL){
+        link_list *ll = llhead->head;
+        printf("| tconst of record found       :               |\n");
         while(ll!=NULL){
             //hide result too long
             //printf("%s|" , ll->ptr->title);
@@ -943,36 +1293,45 @@ int main() {
             ll=ll->nextItem;
         }
     }
-    printf("Number of Record Found : %d \n",numOfRecordFound);
+    else{
+        printf("No Record Found ! \n");
+    }
+    printf("| Number of Record Found       : %d         |\n",numOfRecordFound);
     int blockaccess = calculateblockAccess(llhead,head,false);
-    printf("Number of data block access : %d \n",blockaccess);
-    printf("---------------------------------\n");
+    printf("| Number of data block access  : %d         |\n",blockaccess);
+    printf("+----------------------------------------------+\n");
 
 
-    printf("\nRange of Key Search Statistics\n");
-    printf("---------------------------------\n");
+    printf("\n             RANGE OF KEY SEARCH STATISTICS  \n");
+    printf("+--------------------------------------------------------+\n");
     //Retrieve for range of key
     //Hard Code searching for range value -> can change to let user type the value
-    numOfAccess = 0;
+    numOfAccess = 0 ;
     blockaccess = 0;
     int numOfHead = 0;
     float returned_keys[50000];
 	void *returned_pointers[50000];
 	float sKey = 7;
 	float eKey = 9;
+	//printf("\n");
 	numOfRecordFound = find_range(root, sKey, eKey, false,returned_keys, returned_pointers,&numOfAccess,&numOfHead);
-    printf("Number of index block access : %d \n",numOfAccess+1);
-    printf("Number of Record Found : %d \n",numOfRecordFound);
+    printf("| Number of Index Block Access: %d                       |\n",numOfAccess+1);
+    printf("| Number of Record Found      : %d                   |\n",numOfRecordFound);
     blockaccess = calculateblockAccessRange(sKey, eKey,head,false,numOfHead);
-    printf("Number of data block access : %d \n",blockaccess);
-    printf("---------------------------------\n");
-    fclose(fp);
-    //if (line)
-        //free(line);
-    //exit(EXIT_SUCCESS);
+    printf("| Number of Data Block Access : %d                   |\n",blockaccess);
+    printf("+--------------------------------------------------------+\n");
 
-    //find_and_print(root, 4.1, false);
-    //
+
+
+    printf("\nDelete Record Statistics\n");
+    printf("---------------------------------\n");
+    numOfAccess = 0 ;
+    root = deleteIndex(root, 6.6,&numOfAccess);
+    printf("Number of Index Node Deleted : %d \n",numOfAccess);
+    h = height(root);
+    printf("Height of B+ Tree : %d\n", h);
+    //print_tree(root,true);
+    printf("---------------------------------\n");
 
 }
 
