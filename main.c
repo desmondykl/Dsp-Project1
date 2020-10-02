@@ -1256,10 +1256,10 @@ int main() {
     //Never include the index size not sure if need
     printf("\n          DATABASE STATISTICS     \n");
     printf("+------------------------------------+\n");
-    printf("| Size of a Block      = %d Btye    |\n",BLOCK);
+    printf("| Size of a Block      : %d Btye    |\n",BLOCK);
     printf("| The Size of Database : %d    |\n",sizeOfDb);
-    printf("| Number of Blocks     = %d\t     |\n",NumberOfBlock);
-    printf("| Number of Records    = %d     |\n",numberR);
+    printf("| Number of Blocks     : %d\t     |\n",NumberOfBlock);
+    printf("| Number of Records    : %d     |\n",numberR);
     printf("+------------------------------------+\n\n");
 
     //false = just print stats - numOfnodes
@@ -1268,24 +1268,25 @@ int main() {
     int numberOfNode = 0;
     printf("\n   B+ Tree STATISTICS\n");
     printf("+----------------------+\n");
-    printf("| Parameter n      : %d |", order);
+    printf("| Parameter n      : %d |\n", order);
     print_tree(root,false,&numberOfNode);
-    printf("\nNumber Of Nodes : %d\n", numberOfNode);
+    printf("| Number Of Nodes   : %d|\n", numberOfNode);
     printf("| Height of B+ Tree: %d |\n", h);
     printf("+----------------------+\n\n");
 
     //Retrieve for a single key
     //Hard Code searching for key value 8 -> can change to let user type the value
-    printf("\n        SINGLE KEY SEARCH STATISTICS \n");
-    printf("+----------------------------------------------+\n");
+    printf("\n               SINGLE KEY SEARCH STATISTICS \n");
+    printf("+--------------------------------------------------------+\n");
     int numOfAccess = 0 ;
     int numOfRecordFound = 0 ;
     float Key = 8;
     link_list_head *llhead = find(root, Key, true, NULL,&numOfAccess);
-    printf("| Number of index block access : %d             |\n",numOfAccess+1);
+    printf("+--------------------------------------------------------+\n");
+    printf("| Number of index block access : %d                       |\n",numOfAccess+1);
     if(llhead != NULL){
         link_list *ll = llhead->head;
-        printf("| tconst of record found       :               |\n");
+        printf("| tconst of record found       :                         |\n");
         while(ll!=NULL){
             //hide result too long
             //printf("%s|" , ll->ptr->title);
@@ -1296,10 +1297,10 @@ int main() {
     else{
         printf("No Record Found ! \n");
     }
-    printf("| Number of Record Found       : %d         |\n",numOfRecordFound);
+    printf("| Number of Record Found       : %d                   |\n",numOfRecordFound);
     int blockaccess = calculateblockAccess(llhead,head,false);
-    printf("| Number of data block access  : %d         |\n",blockaccess);
-    printf("+----------------------------------------------+\n");
+    printf("| Number of data block access  : %d                   |\n",blockaccess);
+    printf("+--------------------------------------------------------+\n");
 
 
     printf("\n             RANGE OF KEY SEARCH STATISTICS  \n");
@@ -1315,7 +1316,8 @@ int main() {
 	float eKey = 9;
 	//printf("\n");
 	numOfRecordFound = find_range(root, sKey, eKey, false,returned_keys, returned_pointers,&numOfAccess,&numOfHead);
-    printf("| Number of Index Block Access: %d                       |\n",numOfAccess+1);
+    printf("+--------------------------------------------------------+\n");
+    printf("| Number of Index Block Access: %d                        |\n",numOfAccess+1);
     printf("| Number of Record Found      : %d                   |\n",numOfRecordFound);
     blockaccess = calculateblockAccessRange(sKey, eKey,head,false,numOfHead);
     printf("| Number of Data Block Access : %d                   |\n",blockaccess);
@@ -1323,15 +1325,15 @@ int main() {
 
 
 
-    printf("\nDelete Record Statistics\n");
-    printf("---------------------------------\n");
+    printf("\n    DELETE RECORD STATISTICS\n");
+    printf("+-----------------------------------+\n");
     numOfAccess = 0 ;
     root = deleteIndex(root, 6.6,&numOfAccess);
-    printf("Number of Index Node Deleted : %d \n",numOfAccess);
+    printf("| Number of Index Node Deleted : %d  |\n",numOfAccess);
     h = height(root);
-    printf("Height of B+ Tree : %d\n", h);
+    printf("| Height of B+ Tree            : %d  |\n", h);
     //print_tree(root,true);
-    printf("---------------------------------\n");
+    printf("+-----------------------------------+\n");
 
 }
 
