@@ -7,10 +7,9 @@
 //CHANGE BLOCK SIZE HERE
 #define BLOCK 100
 
-
 #define MAXRECORD ((BLOCK/20)-1)
 //ORDER
-#define order (((BLOCK+4)/12)+1)
+#define order (int)(((BLOCK+4)/12))
 
 // 1 row/record = 20 byte
 typedef struct record {
@@ -22,8 +21,8 @@ typedef struct record {
 //Max 100
 struct Blocks {
     Record records[MAXRECORD];    // MAXRECORD*20 btye
-    struct Blocks * next; // 8 byte
-    int size;             // 4 btye
+    struct Blocks * next;         // 8 byte
+    int size;                     // 4 btye
 };
 
 // Block of 100btye can only store 5 key in the linklist
@@ -41,13 +40,12 @@ typedef struct link_list{
 
 
 typedef struct node {
-    void ** pointers;
-	//void ** pointers;
-	float * keys;
-	struct node * parent;
-	bool is_leaf;
-	int num_keys;
-	struct node * next; // Used for queue.
+    void ** pointers;               // 8*order btye
+	float * keys;                   // 4*(order-1) btye
+	struct node * parent;           // 8 btye
+	bool is_leaf;                   // 1 btye
+	int num_keys;                   // 4 btye
+	struct node * next;             // 8 btye
 } node;
 
 node * insert_into_parent(node * root, node * left, float key, node * right);
@@ -563,7 +561,8 @@ void print_tree(node * const root,bool printOutput, int *numOfNode) {
 			printf("(%p)", n);
 		for (i = 0; i < n->num_keys; i++) {
             if(i==0)
-                printf("[");
+                if(printOutput)
+                    printf("[");
 			if (verbose_output)
 				printf("%p ", n->pointers[i]);
 			if(printOutput)
@@ -788,6 +787,12 @@ void printDataBlock(struct Blocks *Blocks){
             printf("+----------------+--------+--------+\n");
         if(Blocks->records[i].vote<999)
             printf("| %s\t | %0.2f\t  | %d\t   |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
+        else if(Blocks->records[i].vote<9999)
+            printf("| %s\t | %0.2f\t  | %d   |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
+        else if(Blocks->records[i].vote<99999)
+            printf("| %s\t | %0.2f\t  | %d  |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
+        else if(Blocks->records[i].vote<999999)
+            printf("| %s\t | %0.2f\t  | %d |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
         else
             printf("| %s\t | %0.2f\t  | %d   |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
 
@@ -808,7 +813,7 @@ int calculateblockAccessRange (float sKey,float eKey,struct Blocks *head, bool v
             if(currentBlockRecord->rating>= sKey && currentBlockRecord->rating<= eKey){
                 numofaccess++;
                 if(verbose)
-                    printDataBlock(currentBlockRecord);
+                    printDataBlock(currentBlock);
                 break;
             }
         }
@@ -1218,6 +1223,8 @@ node * deleteIndex(node * root, float key,int *numOfAccess) {
 }
 
 
+
+
 int main() {
     char line[256];
     FILE * fp;
@@ -1242,6 +1249,7 @@ int main() {
         numberR++;
     }
 
+    //Calculate the DataBlock Size
     struct Blocks *current = head;
     int sizeOfDb = 0;
     int NumberOfBlock = 0;
@@ -1252,12 +1260,15 @@ int main() {
     }
     fclose(fp);
     //float array[1070319];
-
+    int numberOfNode = 0;
+    print_tree(root,false,&numberOfNode);
+	int sizeOfNode= (4*(order-1)) + 8+8+4+1+ (8*order);
+	int sizeOfIndex = sizeOfNode*numberOfNode;
     //Never include the index size not sure if need
     printf("\n          DATABASE STATISTICS     \n");
     printf("+------------------------------------+\n");
     printf("| Size of a Block      : %d Btye    |\n",BLOCK);
-    printf("| The Size of Database : %d    |\n",sizeOfDb);
+    printf("| The Size of Database : %d    |\n",sizeOfDb+sizeOfIndex);
     printf("| Number of Blocks     : %d\t     |\n",NumberOfBlock);
     printf("| Number of Records    : %d     |\n",numberR);
     printf("+------------------------------------+\n\n");
@@ -1265,14 +1276,14 @@ int main() {
     //false = just print stats - numOfnodes
     //true = print whole tree;
     int h = height(root);
-    int numberOfNode = 0;
+    numberOfNode = 0;
     printf("\n   B+ Tree STATISTICS\n");
-    printf("+----------------------+\n");
-    printf("| Parameter n      : %d |\n", order);
+    printf("+-----------------------+\n");
+    printf("| Parameter n      : %d  |\n", order);
     print_tree(root,false,&numberOfNode);
     printf("| Number Of Nodes   : %d|\n", numberOfNode);
-    printf("| Height of B+ Tree: %d |\n", h);
-    printf("+----------------------+\n\n");
+    printf("| Height of B+ Tree: %d  |\n", h);
+    printf("+-----------------------+\n\n");
 
     //Retrieve for a single key
     //Hard Code searching for key value 8 -> can change to let user type the value
@@ -1328,13 +1339,13 @@ int main() {
     printf("\n    DELETE RECORD STATISTICS\n");
     printf("+-----------------------------------+\n");
     numOfAccess = 0 ;
-    root = deleteIndex(root, 6.6,&numOfAccess);
     printf("| Number of Index Node Deleted : %d  |\n",numOfAccess);
     h = height(root);
     printf("| Height of B+ Tree            : %d  |\n", h);
-    //print_tree(root,true);
-    printf("+-----------------------------------+\n");
-
+    printf("+-----------------------------------+");
+    printf("\n    B+ TREE AFTER DELETION\n");
+    print_tree(root,true,&numOfAccess);
+    printf("\n");
 }
 
 
