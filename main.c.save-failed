@@ -25,7 +25,8 @@ struct Blocks {
     int size;                     // 4 btye
 };
 
-
+// Block of 100btye can only store 5 key in the linklist
+// 32 btye  + i(16)
 typedef struct link_list_head{
     struct link_list *head;
     struct link_list *last;
@@ -138,9 +139,9 @@ node * find_leaf(node * const root, float key, bool verbose,int *numOfAccess) {
 	while (!c->is_leaf) {
 		if (verbose) {
             if(Counter == 0)
-                printf("| Root Node     : [");
+                printf("Root Node     : [");
 			else
-                printf("| Internal Node : [");
+                printf("Internal Node : [");
 			for (i = 0; i < c->num_keys - 1; i++)
 				printf("%0.2f ", c->keys[i]);
 			printf("%0.2f]\n", c->keys[i]);
@@ -502,14 +503,21 @@ int CalculateLink(node * const root,int count) {
                 count = count + 1;
                 ll = ll->nextItem;
             }
+			if (verbose_output)
+				printf("%p ", temp->pointers[i]);
+			printf("%f ", temp->keys[i]);
 		}
+		if (verbose_output)
+			printf("%p ", temp->pointers[order - 1]);
 		if (temp->pointers[order - 1] != NULL) {
+			printf(" | ");
 			temp = temp->pointers[order - 1];
 		}
 		else
 			break;
 	}
 	return count;
+	printf("\n");
 }
 
 void print_tree(node * const root,bool printOutput, int *numOfNode) {
@@ -526,7 +534,7 @@ void print_tree(node * const root,bool printOutput, int *numOfNode) {
 	queue = NULL;
 	enqueue(root);
     if(printOutput)
-        printf("| Root Node     : ");
+        printf("Root Node     : ");
 	while(queue != NULL) {
 		n = dequeue();
 		(*numOfNode)++;
@@ -537,9 +545,9 @@ void print_tree(node * const root,bool printOutput, int *numOfNode) {
 				if(printOutput){
                     printf("\n");
                     if(!n->is_leaf)
-                        printf("| Internal Node : ");
+                        printf("Internal Node : ");
                     else
-                        printf("| Leaf Node     : ");
+                        printf("Leaf Node     : ");
 				}
 			}
 		}
@@ -612,12 +620,7 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
 	int i, num_found,k;
 	num_found = 0;
 	k=0;
-	node * n =NULL;
-	if(verbose)
-        n = find_leaf(root, key_start, false,numOfAccess);
-    else
-        n = find_leaf(root, key_start, true,numOfAccess);
-
+	node * n = find_leaf(root, key_start, true,numOfAccess);
 	if (n == NULL) return 0;
 	//get position of pointer in the leaf node
 	for (i = 0; i < n->num_keys && n->keys[i] < key_start; i++);
@@ -625,8 +628,7 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
 
 	int g=i;
 	node *print = n->pointers[order - 1];
-	if(!verbose){
-        while (print != NULL) {
+	while (print != NULL) {
 	    bool toPrint = false;
         for (int g = 0; g < print->num_keys && print->keys[g] <= key_end; g++) {
             toPrint=true;
@@ -634,7 +636,7 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
         }
         if(toPrint){
             int a= 0;
-            printf("| Leaf Node     : [");
+            printf("Leaf Node     : [");
             for (a = 0; a < print->num_keys - 1; a++)
                 printf("%0.2f ", print->keys[a]);
             printf("%0.2f] \n", print->keys[a]);
@@ -643,15 +645,9 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
         print = print->pointers[order - 1];
 
 	}
-	}
 
 
-    if(verbose){
-        printf("+-----------------------------------------------------------+\n");
-        printf("|        tconst of Record Found (First 10 Records)          |\n");
-        printf("+-----------+-----------+-----------+-----------+-----------+\n");
-    }
-
+	printf("tconst of record found : \n");
 	while (n != NULL) {
 
 		for (; i < n->num_keys && n->keys[i] <= key_end; i++) {
@@ -661,20 +657,12 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
             returned_pointers[k] = llhead;
             k++;
             while(ll != NULL){
-
-                if(verbose && num_found <10 ){
-                    printf("| %s " , ll->ptr->title);
-                }
-
-                if(verbose && num_found==10) return;
-
-
+                if(verbose)
+                    printf("%s|" , ll->ptr->title);
                 ll = ll->nextItem;
                 num_found++;
                 //returned_keys[num_found] = n->keys[i];
                 //returned_pointers[num_found] = ll->ptr;
-                if(verbose && num_found%5==0)
-                    printf("|\n");
             }
 		}
 		n = n->pointers[order - 1];
@@ -788,106 +776,41 @@ struct Blocks *insertData(struct Blocks *head, char *line){
     current->size++;
     return current;
 }
-
-void print2ndBlockRecord (Record record ){
-    if(record.vote<=9)
-        printf(" %s  | %0.2f   | %d     |\n", record.title,record.rating,record.vote);
-    else if(record.vote<=99)
-        printf(" %s  | %0.2f   | %d    |\n", record.title,record.rating,record.vote);
-    else if(record.vote<=999)
-        printf(" %s  | %0.2f   | %d   |\n", record.title,record.rating,record.vote);
-    else if(record.vote<=9999)
-        printf(" %s  | %0.2f   | %d  |\n", record.title,record.rating,record.vote);
-    else if(record.vote<=99999)
-        printf(" %s  | %0.2f   | %d |\n", record.title,record.rating,record.vote);
-    else if(record.vote<=999999)
-        printf(" %s  | %0.2f   | %d|\n", record.title,record.rating,record.vote);
-    else
-        printf(" %s  | %0.2f   | %d   |\n", record.title,record.rating,record.vote);
-}
-
-
-void printDataBlock(struct Blocks *blocks[]){
-    struct Blocks *Blocks = blocks[0];
-    struct Blocks *Blocks2 = blocks[1];
+void printDataBlock(struct Blocks *Blocks){
     for(int i = 0; i<MAXRECORD; i++){
+        if(i==0)
+            printf("+----------------+--------+--------+\n");
+        if(Blocks->records[i].vote<999)
+            printf("| %s\t | %0.2f\t  | %d\t   |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
+        else if(Blocks->records[i].vote<9999)
+            printf("| %s\t | %0.2f\t  | %d   |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
+        else if(Blocks->records[i].vote<99999)
+            printf("| %s\t | %0.2f\t  | %d  |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
+        else if(Blocks->records[i].vote<999999)
+            printf("| %s\t | %0.2f\t  | %d |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
+        else
+            printf("| %s\t | %0.2f\t  | %d   |\n", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
 
-
-        if(Blocks->records[i].vote<=9){
-            printf("| %s  | %0.2f   | %d     |", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
-            print2ndBlockRecord(Blocks2->records[i]);
-        }
-        else if(Blocks->records[i].vote<=99){
-            printf("| %s  | %0.2f   | %d    |", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
-            print2ndBlockRecord(Blocks2->records[i]);
-        }
-        else if(Blocks->records[i].vote<=999){
-            printf("| %s  | %0.2f   | %d   |", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
-            print2ndBlockRecord(Blocks2->records[i]);
-        }
-        else if(Blocks->records[i].vote<=9999){
-            printf("| %s  | %0.2f   | %d  |", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
-            print2ndBlockRecord(Blocks2->records[i]);
-        }
-        else if(Blocks->records[i].vote<=99999){
-            printf("| %s  | %0.2f   | %d |", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
-            print2ndBlockRecord(Blocks2->records[i]);
-        }
-        else if(Blocks->records[i].vote<=999999){
-            printf("| %s  | %0.2f   | %d|", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
-            print2ndBlockRecord(Blocks2->records[i]);
-        }
-        else{
-            printf("| %s  | %0.2f   | %d   |", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
-            print2ndBlockRecord(Blocks2->records[i]);
-        }
-
-        if(i==MAXRECORD-1)
-            printf("+------------+--------+-------+------------+--------+-------+\n");
+        if(i==3)
+            printf("+----------------+--------+--------+\n");
     }
+    printf("\n");
 }
 int calculateblockAccessRange (float sKey,float eKey,struct Blocks *head, bool verbose,int numOfHead){
+    if(verbose)
+        printf("Data Block Content :\n");
 
     int numofaccess=0;
     struct Blocks *currentBlock = head;
-    struct Blocks *oldBlock = NULL;
-    struct Blocks *printBlock[2] ;
-    int p = 0;
     while(currentBlock!=NULL){
-        bool sameKey = false;
-        float arraykey[MAXRECORD];
-        int c = 0;
-        bool toggle = true;
-
         for(int i = 0; i<MAXRECORD; i++){
             Record *currentBlockRecord = &currentBlock->records[i];
             if(currentBlockRecord->rating>= sKey && currentBlockRecord->rating<= eKey){
-                for(int k = 0; k<MAXRECORD; k++){
-                    if(arraykey[k] == currentBlockRecord->rating){
-                        sameKey=true;
-                        break;
-                    }
-                    else{
-                        arraykey[c] = currentBlockRecord->rating;
-                        c = c+1;
-                        numofaccess++;
-                        break;
-                    }
-                }
-
-                if(toggle){
-                    printBlock[p] = currentBlock;
-                    p++;
-                    toggle=false;
-                }
+                numofaccess++;
+                if(verbose)
+                    printDataBlock(currentBlock);
+                break;
             }
-        }
-        if(p==2){
-            if(verbose && numofaccess<11)
-                printDataBlock(printBlock);
-            p=0;
-            printBlock[0] = NULL;
-            printBlock[1] = NULL;
         }
         currentBlock = currentBlock->next;
     }
@@ -895,99 +818,71 @@ int calculateblockAccessRange (float sKey,float eKey,struct Blocks *head, bool v
 
 }
 
-int calculateblockAccess (link_list_head *ll,struct Blocks *head,bool verbose,float Key){
+int calculateblockAccess (link_list_head *ll,struct Blocks *head,bool verbose){
 
     if(ll==NULL) return;
+    if(verbose)
+        printf("Data Block Content :\n");
+    //printf("%d",sizeof(link_list));
 
-    int numofaccess=0;
-    struct Blocks *currentBlock = head;
-    int p = 0;
-    struct Blocks *printBlock[2] ;
-    while(currentBlock!=NULL){
-        bool sameKey = false;
-        bool toggle = true;
-        for(int i = 0; i<MAXRECORD; i++){
-            Record *currentBlockRecord = &currentBlock->records[i];
-            if(currentBlockRecord->rating == Key){
-                if(!sameKey)
-                    numofaccess++;
-                sameKey = true;
-                if(toggle){
-                    printBlock[p] = currentBlock;
-                    p++;
-                    toggle=false;
-                }
-                //break;
+    struct Blocks *current = head;
+    Record *RecordCurrent = ll->head->ptr;
+    Record *RecordLast = ll->last->ptr;
+    link_list *headLL = ll->head;
+    bool found = false;
+    int i = 0;
+
+    while (current != NULL && !found) {
+        for(i = 0; i<MAXRECORD; i++){
+            Record *t = &current->records[i];
+            if(t==RecordCurrent){
+                found = true;
+                break;
             }
         }
-        if(p==2){
-            if(verbose && numofaccess<11)
-                printDataBlock(printBlock);
-            p=0;
-            printBlock[0] = NULL;
-            printBlock[1] = NULL;
-        }
-        currentBlock = currentBlock->next;
+        if(found)
+            break;
+        current = current->next;
     }
-    return numofaccess;
 
-//    struct Blocks *current = head;
-//    Record *RecordCurrent = ll->head->ptr;
-//    Record *RecordLast = ll->last->ptr;
-//    link_list *headLL = ll->head;
-//    bool found = false;
-//    int i = 0;
-//
-//    while (current != NULL && !found) {
-//        for(i = 0; i<MAXRECORD; i++){
-//            Record *t = &current->records[i];
-//            if(t==RecordCurrent){
-//                found = true;
-//                break;
-//            }
-//        }
-//        if(found)
-//            break;
-//        current = current->next;
-//    }
-//
-//
-//    int blockaccess = 0;
-//    found = false;
-//    while (current != NULL && !found) {
-//        for(i = 0; i<MAXRECORD; i++){
-//            Record *t = &current->records[i];
-//            if(t == ll->last->ptr){
-//                if(verbose)
-//                    printDataBlock(current);
-//                blockaccess++;
-//                found = true;
-//                break;
-//            }
-//        }
-//        if(found)
-//            break;
-//
-//        bool match = false;
-//        for(i = 0; i<MAXRECORD; i++){
-//            Record *t = &current->records[i];
-//            if(t==RecordCurrent){
-//                if(!match){
-//                    if(verbose)
-//                        printDataBlock(current);
-//                    blockaccess++;
-//                    match = true;
-//                }
-//                headLL = headLL->nextItem;
-//                RecordCurrent = headLL->ptr;
-//            }
-//
-//
-//        }
-//
-//        current = current->next;
-//    }
 
+    int blockaccess = 0;
+    found = false;
+    while (current != NULL && !found) {
+        for(i = 0; i<MAXRECORD; i++){
+            Record *t = &current->records[i];
+            if(t == ll->last->ptr){
+                if(verbose)
+                    printDataBlock(current);
+                blockaccess++;
+                found = true;
+                break;
+            }
+        }
+        if(found)
+            break;
+
+        bool match = false;
+        for(i = 0; i<MAXRECORD; i++){
+            Record *t = &current->records[i];
+            if(t==RecordCurrent){
+                if(!match){
+                    if(verbose)
+                        printDataBlock(current);
+                    blockaccess++;
+                    match = true;
+                }
+                headLL = headLL->nextItem;
+                RecordCurrent = headLL->ptr;
+            }
+
+
+        }
+
+        current = current->next;
+    }
+
+    return blockaccess;
 
 
 
@@ -1359,6 +1254,7 @@ int main() {
         current = current->next;
     }
     fclose(fp);
+    //float array[1070319];
 
     //Calculate Index size
     int numberOfNode = 0;
@@ -1366,14 +1262,14 @@ int main() {
 	int sizeOfNode= (4*(order-1)) + 8+8+4+1+ (8*order);
 	int sizeOfIndex = sizeOfNode*numberOfNode;
 
-    int numberOfLink;
-    numberOfLink = CalculateLink(root,numberOfLink);
-    int sizeOfLinklist = numberOfLink*16;
+    CalculateLink(root);
+
+
 
     printf("\n          DATABASE STATISTICS     \n");
     printf("+------------------------------------+\n");
     printf("| Size of a Block      : %d Btye    |\n",BLOCK);
-    printf("| The Size of Database : %d Mb      |\n",  (sizeOfDb+sizeOfIndex+sizeOfLinklist)/100000 );
+    printf("| The Size of Database : %d Mb      |\n",  (sizeOfDb+sizeOfIndex)/100000 );
     printf("| Number of Blocks     : %d\t     |\n",NumberOfBlock);
     printf("| Number of Records    : %d     |\n",numberR);
     printf("+------------------------------------+\n\n");
@@ -1383,32 +1279,29 @@ int main() {
     int h = height(root);
     numberOfNode = 0;
     printf("\n   B+ Tree STATISTICS\n");
-    printf("+-------------------------------+\n");
-    printf("| Parameter n         : %d\t|\n", order);
+    printf("+-----------------------+\n");
+    printf("| Parameter n      : %d  |\n", order);
     print_tree(root,false,&numberOfNode);
-    printf("| Number Of Nodes     : %d\t|\n", numberOfNode);
-    printf("| Height of B+ Tree   : %d\t|\n", h);
-    printf("+-------------------------------+\n\n");
-    printf("\n  B+ Tree CONTENT\n");
-    printf("+-------------------------------+\n");
-    print_tree(root,true,&numberOfNode);
-
-
+    printf("| Number Of Nodes   : %d|\n", numberOfNode);
+    printf("| Height of B+ Tree: %d  |\n", h);
+    printf("+-----------------------+\n\n");
 
     //Retrieve for a single key
     //Hard Code searching for key value 8 -> can change to let user type the value
-    printf("\n");
     printf("\n               SINGLE KEY SEARCH STATISTICS \n");
-    printf("+----------------------------------------------------------+\n");
+    printf("+--------------------------------------------------------+\n");
     int numOfAccess = 0 ;
     int numOfRecordFound = 0 ;
     float Key = 8;
     link_list_head *llhead = find(root, Key, true, NULL,&numOfAccess);
-    printf("+-----------------------------------------------------------+\n");
-    printf("| Number of index block access : %d                          |\n",numOfAccess+1);
+    printf("+--------------------------------------------------------+\n");
+    printf("| Number of index block access : %d                       |\n",numOfAccess+1);
     if(llhead != NULL){
         link_list *ll = llhead->head;
+        printf("| tconst of record found       :                         |\n");
         while(ll!=NULL){
+            //hide result too long
+            //printf("%s|" , ll->ptr->title);
             numOfRecordFound++;
             ll=ll->nextItem;
         }
@@ -1416,37 +1309,10 @@ int main() {
     else{
         printf("No Record Found ! \n");
     }
-    printf("| Number of Record Found       : %d                      |\n",numOfRecordFound);
-    int blockaccess = calculateblockAccess(llhead,head,false,Key);
-    printf("| Number of data block access  : %d                      |\n",blockaccess);
-    printf("+-----------------------------------------------------------+\n");
-    printf("|        tconst of Record Found (First 10 Records)          |\n");
-    printf("+-----------+-----------+-----------+-----------+-----------+\n");
-    link_list *ll = llhead->head;
-    numOfRecordFound = 0;
-    while(ll!=NULL){
-        if(numOfRecordFound<10){
-            if(numOfRecordFound<9)
-                printf("| %s " , ll->ptr->title);
-            else{
-                printf("| %s |" , ll->ptr->title);
-                break;
-            }
-        }
-        numOfRecordFound++;
-        ll=ll->nextItem;
-        if(numOfRecordFound%5==0)
-            printf("|\n");
-    }
-    printf("\n");
-    printf("+-----------+-----------+-----------+-----------+-----------+\n");
-    printf("|           Data Block Content ((First 10 Accessed)         |\n");
-    printf("+------------+--------+-------+------------+--------+-------+\n");
-    calculateblockAccess(llhead,head,true,Key);
-
-
-
-
+    printf("| Number of Record Found       : %d                   |\n",numOfRecordFound);
+    int blockaccess = calculateblockAccess(llhead,head,false);
+    printf("| Number of data block access  : %d                   |\n",blockaccess);
+    printf("+--------------------------------------------------------+\n");
 
 
     printf("\n             RANGE OF KEY SEARCH STATISTICS  \n");
@@ -1456,40 +1322,29 @@ int main() {
     numOfAccess = 0 ;
     blockaccess = 0;
     int numOfHead = 0;
-    float returned_keys[5000];
-	void *returned_pointers[5000];
+    float returned_keys[50000];
+	void *returned_pointers[50000];
 	float sKey = 7;
 	float eKey = 9;
-
+	//printf("\n");
 	numOfRecordFound = find_range(root, sKey, eKey, false,returned_keys, returned_pointers,&numOfAccess,&numOfHead);
-    printf("+-----------------------------------------------------------+\n");
-    printf("| Number of Index Block Access: %d                           |\n",numOfAccess+1);
-    printf("| Number of Record Found      : %d                      |\n",numOfRecordFound);
+    printf("+--------------------------------------------------------+\n");
+    printf("| Number of Index Block Access: %d                        |\n",numOfAccess+1);
+    printf("| Number of Record Found      : %d                   |\n",numOfRecordFound);
     blockaccess = calculateblockAccessRange(sKey, eKey,head,false,numOfHead);
-    printf("| Number of Data Block Access : %d                      |\n",blockaccess);
-    find_range(root, sKey, eKey, true,returned_keys, returned_pointers,&numOfAccess,&numOfHead);
-    printf("+-----------+-----------+-----------+-----------+-----------+\n");
-    printf("|           Data Block Content (First 10 Accessed)          |\n");
-    printf("+------------+--------+-------+------------+--------+-------+\n");
-    printf("|   tconst   | Rating | Votes |   tconst   | Rating | Votes |\n");
-    printf("+------------+--------+-------+------------+--------+-------+\n");
-    numOfHead = 0;
-    //Print Block
-    calculateblockAccessRange(sKey, eKey,head,true,numOfHead);
-    numOfAccess = 0 ;
-    blockaccess = 0;
+    printf("| Number of Data Block Access : %d                   |\n",blockaccess);
+    printf("+--------------------------------------------------------+\n");
 
 
 
-    printf("\n\n    DELETE RECORD STATISTICS\n");
+    printf("\n    DELETE RECORD STATISTICS\n");
     printf("+-----------------------------------+\n");
     numOfAccess = 0 ;
     printf("| Number of Index Node Deleted : %d  |\n",numOfAccess);
     h = height(root);
     printf("| Height of B+ Tree            : %d  |\n", h);
     printf("+-----------------------------------+");
-    printf("\n\n    B+ TREE AFTER DELETION\n");
-    printf("+-----------------------------------+\n");
+    printf("\n    B+ TREE AFTER DELETION\n");
     print_tree(root,true,&numOfAccess);
     printf("\n");
 
