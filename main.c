@@ -6,10 +6,11 @@
 
 //CHANGE BLOCK SIZE HERE
 #define BLOCK 100
+//#define BLOCK 500
 
 #define MAXRECORD ((BLOCK/20)-1)
 //ORDER
-#define order (int)(((BLOCK+4)/12))
+#define order (int)((((BLOCK+4)/12))-2)
 
 // 1 row/record = 20 byte
 typedef struct record {
@@ -18,7 +19,7 @@ typedef struct record {
    char  title[12] ;    // 12 btye
 } Record;
 
-//Max 100
+
 struct Blocks {
     Record records[MAXRECORD];    // MAXRECORD*20 btye
     struct Blocks * next;         // 8 byte
@@ -161,7 +162,7 @@ node * find_leaf(node * const root, float key, bool verbose,int *numOfAccess) {
 	}
 	//Leaf Node
 	if (verbose) {
-		printf("Leaf Node     : [");
+		printf("| Leaf Node     : [");
 		for (i = 0; i < c->num_keys - 1; i++)
 			printf("%0.2f ", c->keys[i]);
 		printf("%0.2f] \n", c->keys[i]);
@@ -526,7 +527,7 @@ void print_tree(node * const root,bool printOutput, int *numOfNode) {
 	queue = NULL;
 	enqueue(root);
     if(printOutput)
-        printf("| Root Node     : ");
+        printf("Root Node     : ");
 	while(queue != NULL) {
 		n = dequeue();
 		(*numOfNode)++;
@@ -537,9 +538,9 @@ void print_tree(node * const root,bool printOutput, int *numOfNode) {
 				if(printOutput){
                     printf("\n");
                     if(!n->is_leaf)
-                        printf("| Internal Node : ");
+                        printf("Internal Node : ");
                     else
-                        printf("| Leaf Node     : ");
+                        printf("Leaf Node     : ");
 				}
 			}
 		}
@@ -637,7 +638,7 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
             printf("| Leaf Node     : [");
             for (a = 0; a < print->num_keys - 1; a++)
                 printf("%0.2f ", print->keys[a]);
-            printf("%0.2f] \n", print->keys[a]);
+            printf("%0.2f]\n", print->keys[a]);
             (*numOfAccess)++;
         }
         print = print->pointers[order - 1];
@@ -1326,6 +1327,17 @@ node * deleteIndex(node * root, float key,int *numOfAccess) {
 
 
 int main() {
+    /*int choice = 0;
+    printf("1. 100 B");
+    prinft("2. 500 B");
+    printf("Enter choice of Block Size: ");
+
+    if (choice == 1 || choice == 100)
+        blockchoice = 1;
+    else
+        blockchoice = 2;
+
+    if (choice == 1 || choice == 2 || choice == 100 || choice == 500) {*/
     char line[256];
     FILE * fp;
     const char s[2] = "\t";
@@ -1373,7 +1385,7 @@ int main() {
     printf("\n          DATABASE STATISTICS     \n");
     printf("+------------------------------------+\n");
     printf("| Size of a Block      : %d Btye    |\n",BLOCK);
-    printf("| The Size of Database : %d Mb      |\n",  (sizeOfDb+sizeOfIndex+sizeOfLinklist)/100000 );
+    printf("| The Size of Database : %d Mb     |\n",  (sizeOfDb+sizeOfIndex+sizeOfLinklist)/100000 );
     printf("| Number of Blocks     : %d\t     |\n",NumberOfBlock);
     printf("| Number of Records    : %d     |\n",numberR);
     printf("+------------------------------------+\n\n");
@@ -1382,23 +1394,23 @@ int main() {
     //true = print whole tree;
     int h = height(root);
     numberOfNode = 0;
-    printf("\n   B+ Tree STATISTICS\n");
+    printf("\n       B+ TREE STATISTICS\n");
     printf("+-------------------------------+\n");
-    printf("| Parameter n         : %d\t|\n", order);
+    printf("| Parameter n         : %d\t|\n", order-1);
     print_tree(root,false,&numberOfNode);
     printf("| Number Of Nodes     : %d\t|\n", numberOfNode);
     printf("| Height of B+ Tree   : %d\t|\n", h);
     printf("+-------------------------------+\n\n");
-    printf("\n  B+ Tree CONTENT\n");
-    printf("+-------------------------------+\n");
+    printf("\n                  B+ TREE CONTENT\n");
+    printf("+-----------------------------------------------------------+\n");
     print_tree(root,true,&numberOfNode);
+    printf("\n+-----------------------------------------------------------+\n");
 
 
 
     //Retrieve for a single key
     //Hard Code searching for key value 8 -> can change to let user type the value
-    printf("\n");
-    printf("\n               SINGLE KEY SEARCH STATISTICS \n");
+    printf("\n\n               SINGLE KEY SEARCH STATISTICS \n");
     printf("+----------------------------------------------------------+\n");
     int numOfAccess = 0 ;
     int numOfRecordFound = 0 ;
@@ -1449,7 +1461,7 @@ int main() {
 
 
 
-    printf("\n             RANGE OF KEY SEARCH STATISTICS  \n");
+    printf("\n\n             RANGE OF KEY SEARCH STATISTICS  \n");
     printf("+--------------------------------------------------------+\n");
     //Retrieve for range of key
     //Hard Code searching for range value -> can change to let user type the value
@@ -1487,12 +1499,13 @@ int main() {
     printf("| Number of Index Node Deleted : %d  |\n",numOfAccess);
     h = height(root);
     printf("| Height of B+ Tree            : %d  |\n", h);
-    printf("+-----------------------------------+");
-    printf("\n\n    B+ TREE AFTER DELETION\n");
     printf("+-----------------------------------+\n");
+    printf("\n\n                 B+ TREE AFTER DELETION\n");
+    printf("+-----------------------------------------------------------+\n");
     print_tree(root,true,&numOfAccess);
-    printf("\n");
+    printf("\n+-----------------------------------------------------------+\n");
 
+    printf("\n\n      --END--\n");
 
 }
 
