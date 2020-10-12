@@ -63,31 +63,27 @@ int height(node * const root) {
 	return h;
 }
 
-/* Creates a new general node, which can be adapted
- * to serve as either a leaf or an internal node.
- */
+// Create a new node
 node * make_node(void) {
-	node * new_node;
-	new_node = malloc(sizeof(node));
-	if (new_node == NULL) {
-		perror("Node creation.");
+	node * newNode;
+	newNode = malloc(sizeof(node));
+	if (newNode == NULL) {
+		printf("Error in creating new node");
 		exit(EXIT_FAILURE);
 	}
-	new_node->keys = malloc((order - 1) * sizeof(float));
-	if (new_node->keys == NULL) {
-		perror("New node keys array.");
+	newNode->keys = malloc((order - 1) * sizeof(float));
+	if (newNode->keys == NULL) {
 		exit(EXIT_FAILURE);
 	}
-	new_node->pointers = malloc(order * sizeof(void *));
-	if (new_node->pointers == NULL) {
-		perror("New node pointers array.");
+	newNode->pointers = malloc(order * sizeof(void *));
+	if (newNode->pointers == NULL) {
 		exit(EXIT_FAILURE);
 	}
-	new_node->is_leaf = false;
-	new_node->num_keys = 0;
-	new_node->parent = NULL;
-	new_node->next = NULL;
-	return new_node;
+	newNode->is_leaf = false;
+	newNode->num_keys = 0;
+	newNode->parent = NULL;
+	newNode->next = NULL;
+	return newNode;
 }
 
 node * make_leaf(void) {
@@ -96,7 +92,7 @@ node * make_leaf(void) {
 	return leaf;
 }
 
-/* First insertion: start a new tree. */
+// initialize a new B+ tree node
 node *start_new_tree(float key, link_list *pointer) {
 	node * root = make_leaf();
 	root->keys[0] = key;
@@ -104,7 +100,6 @@ node *start_new_tree(float key, link_list *pointer) {
 	root->pointers[order - 1] = NULL;
 	root->parent = NULL;
 	root->num_keys++;
-	//root->nextItem=NULL;
 	return root;
 }
 
@@ -115,31 +110,29 @@ node *start_new_tree(float key, link_list *pointer) {
  */
 node * find_leaf(node * const root, float key, bool verbose,int *numOfAccess) {
 	if (root == NULL) {
-		if (verbose)
-			printf("Empty tree.\n");
+		printf("Empty tree.\n");
 		return root;
 	}
 	int i = 0;
 	int Counter = 0;
-	node * c = root;
+	node * temp = root;
 	int check= 0;
 	if(numOfAccess != NULL){
          check = (*numOfAccess);
 	}
-
-	while (!c->is_leaf) {
+	while (!temp->is_leaf) {
 		if (verbose) {
             if(Counter == 0)
                 printf("| Root Node     : [");
 			else
                 printf("| Internal Node : [");
-			for (i = 0; i < c->num_keys - 1; i++)
-				printf("%0.2f ", c->keys[i]);
-			printf("%0.2f]\n", c->keys[i]);
+			for (i = 0; i < temp->num_keys - 1; i++)
+				printf("%0.2f ", temp->keys[i]);
+			printf("%0.2f]\n", temp->keys[i]);
 		}
 		i = 0;
-		while (i < c->num_keys) {
-			if (key >= c->keys[i]) i++;
+		while (i < temp->num_keys) {
+			if (key >= temp->keys[i]) i++;
 			else break;
 		}
 		//Key position commented first not sure need to print anot
@@ -148,23 +141,21 @@ node * find_leaf(node * const root, float key, bool verbose,int *numOfAccess) {
         //go down the tree until it reach leaf then break;
         if(numOfAccess != NULL)
             (*numOfAccess)++;
-		c = (node *)c->pointers[i];
+		temp = (node *)temp->pointers[i];
 		Counter = Counter + 1;
 	}
 	//Leaf Node
 	if (verbose) {
 		printf("| Leaf Node     : [");
-		for (i = 0; i < c->num_keys - 1; i++)
-			printf("%0.2f ", c->keys[i]);
-		printf("%0.2f] \n", c->keys[i]);
+		for (i = 0; i < temp->num_keys - 1; i++)
+			printf("%0.2f ", temp->keys[i]);
+		printf("%0.2f] \n", temp->keys[i]);
 	}
-	return c;
+	return temp;
 }
 
-/* Inserts a new pointer to a record and its corresponding
- * key into a leaf.
- * Returns the altered leaf.
- */
+
+// Insert record pointer into leaf node
 node *insert_into_leaf(node * leaf, float key, link_list * pointer) {
 
 	int i, insertion_point;
@@ -178,45 +169,36 @@ node *insert_into_leaf(node * leaf, float key, link_list * pointer) {
 		leaf->pointers[i] = leaf->pointers[i - 1];
 	}
 	leaf->keys[insertion_point] = key;
-	//link_list *ll = (link_list *)malloc(sizeof(link_list));
-	//ll->ptr = pointer;
-	//ll->nextItem=NULL;
 	leaf->pointers[insertion_point] = pointer;
 	leaf->num_keys++;
 	return leaf;
 }
-/* Inserts a new key and pointer to a node
- * into a node into which these can fit
- * without violating the B+ tree properties.
- */
-node * insert_into_node(node * root, node * n,
-		int left_index, float key, node * right) {
+
+
+node * insert_into_node(node * root, node * n, int index, float key, node * right) {
 	int i;
 
-	for (i = n->num_keys; i > left_index; i--) {
+	for (i = n->num_keys; i > index; i--) {
 		n->pointers[i + 1] = n->pointers[i];
 		n->keys[i] = n->keys[i - 1];
 	}
-	n->pointers[left_index + 1] = right;
-	n->keys[left_index] = key;
+	n->pointers[index + 1] = right;
+	n->keys[index] = key;
 	n->num_keys++;
 	return root;
 
 }
-/* Finds the appropriate place to
- * split a node that is too big into two.
- */
+
+//Utility function used to divide the node if it is full
 int cut(int length) {
 	if (length % 2 == 0)
 		return length/2;
 	else
 		return length/2 + 1;
 }
-/* Inserts a new key and pointer to a node
- * into a node, causing the node's size to exceed
- * the order, and causing the node to split into two.
- */
-node * insert_into_node_after_splitting(node * root, node * old_node, int left_index,
+
+// When node is full, create a new node and split the key
+node * insert_into_node_after_splitting(node * root, node * old_node, int index,
 		float key, node * right) {
 
 	int i, j, split;
@@ -225,43 +207,29 @@ node * insert_into_node_after_splitting(node * root, node * old_node, int left_i
 	float k_prime;
 	node ** temp_pointers;
 
-	/* First create a temporary set of keys and pointers
-	 * to hold everything in order, including
-	 * the new key and pointer, inserted in their
-	 * correct places.
-	 * Then create a new node and copy half of the
-	 * keys and pointers to the old node and
-	 * the other half to the new.
-	 */
-
 	temp_pointers = malloc((order + 1) * sizeof(node *));
 	if (temp_pointers == NULL) {
-		perror("Temporary pointers array for splitting nodes.");
 		exit(EXIT_FAILURE);
 	}
 	temp_keys = malloc(order * sizeof(float));
 	if (temp_keys == NULL) {
-		perror("Temporary keys array for splitting nodes.");
 		exit(EXIT_FAILURE);
 	}
 
 	for (i = 0, j = 0; i < old_node->num_keys + 1; i++, j++) {
-		if (j == left_index + 1) j++;
+		if (j == index + 1) j++;
 		temp_pointers[j] = old_node->pointers[i];
 	}
 
 	for (i = 0, j = 0; i < old_node->num_keys; i++, j++) {
-		if (j == left_index) j++;
+		if (j == index) j++;
 		temp_keys[j] = old_node->keys[i];
 	}
 
-	temp_pointers[left_index + 1] = right;
-	temp_keys[left_index] = key;
+	temp_pointers[index + 1] = right;
+	temp_keys[index] = key;
 
-	/* Create the new node and copy
-	 * half the keys and pointers to the
-	 * old and half to the new.
-	 */
+	//Create a new node
 	split = cut(order);
 	new_node = make_node();
 	old_node->num_keys = 0;
@@ -285,20 +253,11 @@ node * insert_into_node_after_splitting(node * root, node * old_node, int left_i
 		child = new_node->pointers[i];
 		child->parent = new_node;
 	}
-
-	/* Insert a new key into the parent of the two
-	 * nodes resulting from the split, with
-	 * the old node to the left and the new to the right.
-	 */
-
+    //Update the key in the parent node
 	return insert_into_parent(root, old_node, k_prime, new_node);
 }
-/* Creates a new root for two subtrees
- * and inserts the appropriate key into
- * the new root.
- */
-node * insert_into_new_root(node * left, float key, node * right) {
 
+node * insert_into_new_root(node * left, float key, node * right) {
 	node * root = make_node();
 	root->keys[0] = key;
 	root->pointers[0] = left;
@@ -309,10 +268,7 @@ node * insert_into_new_root(node * left, float key, node * right) {
 	right->parent = root;
 	return root;
 }
-/* Helper function used in insert_into_parent
- * to find the index of the parent's pointer to
- * the node to the left of the key to be inserted.
- */
+
 int get_left_index(node * parent, node * left) {
 
 	int left_index = 0;
@@ -321,49 +277,19 @@ int get_left_index(node * parent, node * left) {
 		left_index++;
 	return left_index;
 }
-/* Inserts a new node (leaf or internal node) into the B+ tree.
- * Returns the root of the tree after insertion.
- */
-node * insert_into_parent(node * root, node * left, float key, node * right) {
 
-	int left_index;
+node * insert_into_parent(node * root, node * left, float key, node * right) {
+	int index;
 	node * parent;
 	parent = left->parent;
-
-	/* Case: new root. */
-
 	if (parent == NULL)
 		return insert_into_new_root(left, key, right);
-
-	/* Case: leaf or node. (Remainder of
-	 * function body.)
-	 */
-
-	/* Find the parent's pointer to the left
-	 * node.
-	 */
-
-	left_index = get_left_index(parent, left);
-
-
-	/* Simple case: the new key fits into the node.
-	 */
-
-	if (parent->num_keys < order - 1)
-		return insert_into_node(root, parent, left_index, key, right);
-
-	/* Harder case:  split a node in order
-	 * to preserve the B+ tree properties.
-	 */
-
-	return insert_into_node_after_splitting(root, parent, left_index, key, right);
+    index = get_left_index(parent, left);
+    if (parent->num_keys < order - 1)
+		return insert_into_node(root, parent, index, key, right);
+	return insert_into_node_after_splitting(root, parent, index, key, right);
 }
 
-/* Inserts a new key and pointer
- * to a new record into a leaf so as to exceed
- * the tree's order, causing the leaf to be split
- * in half.
- */
 node * insert_into_leaf_after_splitting(node * root, node * leaf, float key, link_list * pointer) {
 
 	node * new_leaf;
@@ -376,13 +302,11 @@ node * insert_into_leaf_after_splitting(node * root, node * leaf, float key, lin
 
 	temp_keys = malloc(order * sizeof(float));
 	if (temp_keys == NULL) {
-		perror("Temporary keys array.");
 		exit(EXIT_FAILURE);
 	}
 
 	temp_pointers = malloc(order * sizeof(link_list));
 	if (temp_pointers == NULL) {
-		perror("Temporary pointers array.");
 		exit(EXIT_FAILURE);
 	}
 
@@ -431,9 +355,7 @@ node * insert_into_leaf_after_splitting(node * root, node * leaf, float key, lin
 	return insert_into_parent(root, leaf, new_key, new_leaf);
 }
 
-/* Utility function to give the length in edges
- * of the path from any node to the root.
- */
+//check for node height
 int path_to_root(node * const root, node * child) {
 	int length = 0;
 	node * c = child;
@@ -443,9 +365,7 @@ int path_to_root(node * const root, node * child) {
 	}
 	return length;
 }
-/* Helper function for printing the
- * tree out.  See print_tree.
- */
+//Used for printing B+ tree
 void enqueue(node * new_node) {
 	node * c;
 	if (queue == NULL) {
@@ -461,16 +381,13 @@ void enqueue(node * new_node) {
 		new_node->next = NULL;
 	}
 }
-/* Helper function for printing the
- * tree out.  See print_tree.
- */
+//Used for printing B+ tree
 node * dequeue(void) {
 	node * n = queue;
 	queue = queue->next;
 	n->next = NULL;
 	return n;
 }
-
 
 int CalculateLink(node * const root,int count) {
 	if (root == NULL) {
@@ -498,6 +415,7 @@ int CalculateLink(node * const root,int count) {
 	}
 	return count;
 }
+
 
 void print_tree(node * const root,bool printOutput, int *numOfNode) {
 
@@ -530,35 +448,22 @@ void print_tree(node * const root,bool printOutput, int *numOfNode) {
 				}
 			}
 		}
-
-		if (verbose_output)
-			printf("(%p)", n);
 		for (i = 0; i < n->num_keys; i++) {
             if(i==0)
                 if(printOutput)
                     printf("[");
-			if (verbose_output)
-				printf("%p ", n->pointers[i]);
 			if(printOutput)
                 printf("%0.2f ", n->keys[i]);
 		}
 		if (!n->is_leaf)
 			for (i = 0; i <= n->num_keys; i++)
 				enqueue(n->pointers[i]);
-		if (verbose_output) {
-			if (n->is_leaf)
-				printf("%p ", n->pointers[order - 1]);
-			else
-				printf("%p ", n->pointers[n->num_keys]);
-		}
 		if(printOutput)
             printf("] ");
 	}
 }
 
-/* Finds and returns the record to which
- * a key refers.
- */
+// Look for record ptr based on the given key
 link_list * find(node * root, float key, bool verbose, node ** leaf_out, int *numOfAccess) {
     if (root == NULL) {
         if (leaf_out != NULL) {
@@ -569,14 +474,7 @@ link_list * find(node * root, float key, bool verbose, node ** leaf_out, int *nu
 
 	int i = 0;
     node * leaf = NULL;
-
 	leaf = find_leaf(root, key, verbose,numOfAccess);
-
-    /* If root != NULL, leaf must have a value, even
-     * if it does not contain the desired key.
-     * (The leaf holds the range of keys that would
-     * include the desired key.)
-     */
 
 	for (i = 0; i < leaf->num_keys; i++)
 		if (leaf->keys[i] == key) break;
@@ -589,13 +487,7 @@ link_list * find(node * root, float key, bool verbose, node ** leaf_out, int *nu
 		return (link_list*)leaf->pointers[i];
 }
 
-/* Finds keys and their pointers, if present, in the range specified
- * by key_start and key_end, inclusive.  Places these in the arrays
- * returned_keys and returned_pointers, and returns the number of
- * entries found.
- */
-int find_range(node * const root, float key_start, float key_end, bool verbose,
-                 float returned_keys[], void * returned_pointers[], int *numOfAccess,int *numOfHead) {
+int find_range(node * const root, float key_start, float key_end, bool verbose, int *numOfAccess,int *numOfHead) {
 	int i, num_found,k;
 	num_found = 0;
 	k=0;
@@ -614,22 +506,21 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
 	node *print = n->pointers[order - 1];
 	if(!verbose){
         while (print != NULL) {
-	    bool toPrint = false;
-        for (int g = 0; g < print->num_keys && print->keys[g] <= key_end; g++) {
-            toPrint=true;
-            break;
+            bool toPrint = false;
+            for (int g = 0; g < print->num_keys && print->keys[g] <= key_end; g++) {
+                toPrint=true;
+                break;
+            }
+            if(toPrint){
+                int a= 0;
+                printf("| Leaf Node     : [");
+                for (a = 0; a < print->num_keys - 1; a++)
+                    printf("%0.2f ", print->keys[a]);
+                printf("%0.2f]\n", print->keys[a]);
+                (*numOfAccess)++;
+            }
+            print = print->pointers[order - 1];
         }
-        if(toPrint){
-            int a= 0;
-            printf("| Leaf Node     : [");
-            for (a = 0; a < print->num_keys - 1; a++)
-                printf("%0.2f ", print->keys[a]);
-            printf("%0.2f]\n", print->keys[a]);
-            (*numOfAccess)++;
-        }
-        print = print->pointers[order - 1];
-
-	}
 	}
 
 
@@ -638,28 +529,18 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
         printf("|        tconst of Record Found (First 10 Records)          |\n");
         printf("+-----------+-----------+-----------+-----------+-----------+\n");
     }
-
 	while (n != NULL) {
-
 		for (; i < n->num_keys && n->keys[i] <= key_end; i++) {
-			//returned_keys[num_found] = n->keys[i];
             link_list_head *llhead = n->pointers[i];
             link_list *ll = llhead->head;
-            returned_pointers[k] = llhead;
             k++;
             while(ll != NULL){
-
                 if(verbose && num_found <10 ){
                     printf("| %s " , ll->ptr->title);
                 }
-
                 if(verbose && num_found==10) return;
-
-
                 ll = ll->nextItem;
                 num_found++;
-                //returned_keys[num_found] = n->keys[i];
-                //returned_pointers[num_found] = ll->ptr;
                 if(verbose && num_found%5==0)
                     printf("|\n");
             }
@@ -667,16 +548,10 @@ int find_range(node * const root, float key_start, float key_end, bool verbose,
 		n = n->pointers[order - 1];
 		i = 0;
 	}
-
-
 	return num_found;
 }
 
-/* Finds and prints the keys, pointers, and values within a range
- * of keys between key_start and key_end, including both bounds.
- */
-
-
+// Insert as a linklist if the key is duplicate
 insertAsLink(link_list_head *duplicateKey,Record *ptr){
     link_list_head *ll = duplicateKey;
 
@@ -687,6 +562,7 @@ insertAsLink(link_list_head *duplicateKey,Record *ptr){
     ll->last=ll_new;
 
 }
+
 
 node *insert(node * root,float key,Record *ptr) {
     link_list *record_pointer = NULL;
@@ -776,6 +652,7 @@ struct Blocks *insertData(struct Blocks *head, char *line){
     return current;
 }
 
+//pretty print data block
 void print2ndBlockRecord (Record record ){
     if(record.vote<=9)
         printf(" %s  | %0.2f   | %d     |\n", record.title,record.rating,record.vote);
@@ -792,13 +669,11 @@ void print2ndBlockRecord (Record record ){
     else
         printf(" %s  | %0.2f   | %d   |\n", record.title,record.rating,record.vote);
 }
-
-
+//pretty print data block
 void printDataBlock(struct Blocks *blocks[]){
     struct Blocks *Blocks = blocks[0];
     struct Blocks *Blocks2 = blocks[1];
     for(int i = 0; i<MAXRECORD; i++){
-
 
         if(Blocks->records[i].vote<=9){
             printf("| %s  | %0.2f   | %d     |", Blocks->records[i].title,Blocks->records[i].rating,Blocks->records[i].vote);
@@ -918,81 +793,18 @@ int calculateblockAccess (link_list_head *ll,struct Blocks *head,bool verbose,fl
     }
     return numofaccess;
 
-//    struct Blocks *current = head;
-//    Record *RecordCurrent = ll->head->ptr;
-//    Record *RecordLast = ll->last->ptr;
-//    link_list *headLL = ll->head;
-//    bool found = false;
-//    int i = 0;
-//
-//    while (current != NULL && !found) {
-//        for(i = 0; i<MAXRECORD; i++){
-//            Record *t = &current->records[i];
-//            if(t==RecordCurrent){
-//                found = true;
-//                break;
-//            }
-//        }
-//        if(found)
-//            break;
-//        current = current->next;
-//    }
-//
-//
-//    int blockaccess = 0;
-//    found = false;
-//    while (current != NULL && !found) {
-//        for(i = 0; i<MAXRECORD; i++){
-//            Record *t = &current->records[i];
-//            if(t == ll->last->ptr){
-//                if(verbose)
-//                    printDataBlock(current);
-//                blockaccess++;
-//                found = true;
-//                break;
-//            }
-//        }
-//        if(found)
-//            break;
-//
-//        bool match = false;
-//        for(i = 0; i<MAXRECORD; i++){
-//            Record *t = &current->records[i];
-//            if(t==RecordCurrent){
-//                if(!match){
-//                    if(verbose)
-//                        printDataBlock(current);
-//                    blockaccess++;
-//                    match = true;
-//                }
-//                headLL = headLL->nextItem;
-//                RecordCurrent = headLL->ptr;
-//            }
-//
-//
-//        }
-//
-//        current = current->next;
-//    }
-
-
-
-
 }
 
 node * remove_entry_from_node(node * n, float key, node * pointer) {
 
 	int i, num_pointers;
 
-	// Remove the key and shift other keys accordingly.
 	i = 0;
 	while (n->keys[i] != key)
 		i++;
 	for (++i; i < n->num_keys; i++)
 		n->keys[i - 1] = n->keys[i];
 
-	// Remove the pointer and shift other pointers accordingly.
-	// First determine number of pointers.
 	num_pointers = n->is_leaf ? n->num_keys : n->num_keys + 1;
 	i = 0;
 	while (n->pointers[i] != pointer)
@@ -1000,49 +812,25 @@ node * remove_entry_from_node(node * n, float key, node * pointer) {
 	for (++i; i < num_pointers; i++)
 		n->pointers[i - 1] = n->pointers[i];
 
-
-	// One key fewer.
 	n->num_keys--;
-
-	// Set the other pointers to NULL for tidiness.
-	// A leaf uses the last pointer to point to the next leaf.
 	if (n->is_leaf)
 		for (i = n->num_keys; i < order - 1; i++)
 			n->pointers[i] = NULL;
 	else
 		for (i = n->num_keys + 1; i < order; i++)
 			n->pointers[i] = NULL;
-
 	return n;
 }
 
 node * adjust_root(node * root) {
 
 	node * new_root;
-
-	/* Case: nonempty root.
-	 * Key and pointer have already been deleted,
-	 * so nothing to be done.
-	 */
-
 	if (root->num_keys > 0)
 		return root;
-
-	/* Case: empty root.
-	 */
-
-	// If it has a child, promote
-	// the first (only) child
-	// as the new root.
-
 	if (!root->is_leaf) {
 		new_root = root->pointers[0];
 		new_root->parent = NULL;
 	}
-
-	// If it is a leaf (has no children),
-	// then the whole tree is empty.
-
 	else
 		new_root = NULL;
 
@@ -1053,22 +841,10 @@ node * adjust_root(node * root) {
 }
 
 int get_neighbor_index(node * n) {
-
 	int i;
-
-	/* Return the index of the key to the left
-	 * of the pointer in the parent pointing
-	 * to n.
-	 * If n is the leftmost child, this means
-	 * return -1.
-	 */
 	for (i = 0; i <= n->parent->num_keys; i++)
 		if (n->parent->pointers[i] == n)
 			return i - 1;
-
-	// Error state.
-	printf("Search for nonexistent pointer to node in parent.\n");
-	printf("Node:  %#lx\n", (unsigned long)n);
 	exit(EXIT_FAILURE);
 }
 
@@ -1076,69 +852,28 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
 
 	int i, j, neighbor_insertion_index, n_end;
 	node * tmp;
-
-	/* Swap neighbor with node if node is on the
-	 * extreme left and neighbor is to its right.
-	 */
-
 	if (neighbor_index == -1) {
 		tmp = n;
 		n = neighbor;
 		neighbor = tmp;
 	}
-
-	/* Starting point in the neighbor for copying
-	 * keys and pointers from n.
-	 * Recall that n and neighbor have swapped places
-	 * in the special case of n being a leftmost child.
-	 */
-
 	neighbor_insertion_index = neighbor->num_keys;
-
-	/* Case:  nonleaf node.
-	 * Append k_prime and the following pointer.
-	 * Append all pointers and keys from the neighbor.
-	 */
-
 	if (!n->is_leaf) {
-
-		/* Append k_prime.
-		 */
-
-		neighbor->keys[neighbor_insertion_index] = k_prime;
+        neighbor->keys[neighbor_insertion_index] = k_prime;
 		neighbor->num_keys++;
-
-
-		n_end = n->num_keys;
-
-		for (i = neighbor_insertion_index + 1, j = 0; j < n_end; i++, j++) {
+        n_end = n->num_keys;
+        for (i = neighbor_insertion_index + 1, j = 0; j < n_end; i++, j++) {
 			neighbor->keys[i] = n->keys[j];
 			neighbor->pointers[i] = n->pointers[j];
 			neighbor->num_keys++;
 			n->num_keys--;
 		}
-
-		/* The number of pointers is always
-		 * one more than the number of keys.
-		 */
-
-		neighbor->pointers[i] = n->pointers[j];
-
-		/* All children must now point up to the same parent.
-		 */
-
-		for (i = 0; i < neighbor->num_keys + 1; i++) {
+        neighbor->pointers[i] = n->pointers[j];
+        for (i = 0; i < neighbor->num_keys + 1; i++) {
 			tmp = (node *)neighbor->pointers[i];
 			tmp->parent = neighbor;
 		}
 	}
-
-	/* In a leaf, append the keys and pointers of
-	 * n to the neighbor.
-	 * Set the neighbor's last pointer to point to
-	 * what had been n's right neighbor.
-	 */
-
 	else {
 		for (i = neighbor_insertion_index, j = 0; j < n->num_keys; i++, j++) {
 			neighbor->keys[i] = n->keys[j];
@@ -1147,7 +882,6 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
 		}
 		neighbor->pointers[order - 1] = n->pointers[order - 1];
 	}
-
 	root = delete_entry(root, n->parent, k_prime, n,numOfaccess);
 	free(n->keys);
 	free(n->pointers);
@@ -1161,12 +895,6 @@ node * redistribute_nodes(node * root, node * n, node * neighbor, int neighbor_i
 
 	int i;
 	node * tmp;
-
-	/* Case: n has a neighbor to the left.
-	 * Pull the neighbor's last key-pointer pair over
-	 * from the neighbor's right end to n's left end.
-	 */
-
 	if (neighbor_index != -1) {
 		if (!n->is_leaf)
 			n->pointers[n->num_keys + 1] = n->pointers[n->num_keys];
@@ -1189,13 +917,6 @@ node * redistribute_nodes(node * root, node * n, node * neighbor, int neighbor_i
 			n->parent->keys[k_prime_index] = n->keys[0];
 		}
 	}
-
-	/* Case: n is the leftmost child.
-	 * Take a key-pointer pair from the neighbor to the right.
-	 * Move the neighbor's leftmost key-pointer pair
-	 * to n's rightmost position.
-	 */
-
 	else {
 		if (n->is_leaf) {
 			n->keys[n->num_keys] = neighbor->keys[0];
@@ -1217,10 +938,6 @@ node * redistribute_nodes(node * root, node * n, node * neighbor, int neighbor_i
 			neighbor->pointers[i] = neighbor->pointers[i + 1];
 	}
 
-	/* n now has one more key and one more pointer;
-	 * the neighbor has one fewer of each.
-	 */
-
 	n->num_keys++;
 	neighbor->num_keys--;
 
@@ -1235,46 +952,15 @@ node * delete_entry(node * root, node * n, float key, void * pointer, int *numOf
 	int k_prime_index;
 	float k_prime;
 	int capacity;
-
-	// Remove key and pointer from node.
-
 	n = remove_entry_from_node(n, key, pointer);
-
-	/* Case:  deletion from the root.
-	 */
 
 	if (n == root)
 		return adjust_root(root);
 
-
-	/* Case:  deletion from a node below the root.
-	 * (Rest of function body.)
-	 */
-
-	/* Determine minimum allowable size of node,
-	 * to be preserved after deletion.
-	 */
-
 	min_keys = n->is_leaf ? cut(order - 1) : cut(order) - 1;
-
-	/* Case:  node stays at or above minimum.
-	 * (The simple case.)
-	 */
 
 	if (n->num_keys >= min_keys)
 		return root;
-
-	/* Case:  node falls below minimum.
-	 * Either coalescence or redistribution
-	 * is needed.
-	 */
-
-	/* Find the appropriate neighbor node with which
-	 * to coalesce.
-	 * Also find the key (k_prime) in the parent
-	 * between the pointer to node n and the pointer
-	 * to the neighbor.
-	 */
 
 	neighbor_index = get_neighbor_index(n);
 	k_prime_index = neighbor_index == -1 ? 0 : neighbor_index;
@@ -1283,26 +969,18 @@ node * delete_entry(node * root, node * n, float key, void * pointer, int *numOf
 		n->parent->pointers[neighbor_index];
 
 	capacity = n->is_leaf ? order : order - 1;
-
-	/* Coalescence. */
 	if (neighbor->num_keys + n->num_keys < capacity){
 		return coalesce_nodes(root, n, neighbor, neighbor_index, k_prime,numOfAccess);
     }
-	/* Redistribution. */
 	else
 		return redistribute_nodes(root, n, neighbor, neighbor_index, k_prime_index, k_prime);
 }
 
 
 node * deleteIndex(node * root, float key,int *numOfAccess) {
-
 	node * key_leaf = NULL;
 	link_list_head * key_record = NULL;
-
 	key_record = find(root, key, false, &key_leaf,NULL);
-
-    /* CHANGE */
-
 	if (key_record != NULL && key_leaf != NULL) {
 		root = delete_entry(root, key_leaf, key, key_record,numOfAccess);
 	}
@@ -1436,18 +1114,16 @@ int main() {
     numOfAccess = 0 ;
     blockaccess = 0;
     int numOfHead = 0;
-    float returned_keys[5000];
-	void *returned_pointers[5000];
 	float sKey = 7;
 	float eKey = 9;
 
-	numOfRecordFound = find_range(root, sKey, eKey, false,returned_keys, returned_pointers,&numOfAccess,&numOfHead);
+	numOfRecordFound = find_range(root, sKey, eKey, false,&numOfAccess,&numOfHead);
     printf("+-----------------------------------------------------------+\n");
     printf("| Number of Index Block Access: %d                           |\n",numOfAccess+1);
     printf("| Number of Record Found      : %d                      |\n",numOfRecordFound);
     blockaccess = calculateblockAccessRange(sKey, eKey,head,false,numOfHead);
     printf("| Number of Data Block Access : %d                      |\n",blockaccess);
-    find_range(root, sKey, eKey, true,returned_keys, returned_pointers,&numOfAccess,&numOfHead);
+    find_range(root, sKey, eKey, true,&numOfAccess,&numOfHead);
     printf("+-----------+-----------+-----------+-----------+-----------+\n");
     printf("|           Data Block Content (First 10 Accessed)          |\n");
     printf("+------------+--------+-------+------------+--------+-------+\n");
