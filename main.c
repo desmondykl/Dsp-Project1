@@ -3,13 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 //CHANGE BLOCK SIZE HERE
-#define BLOCK 100
-//#define BLOCK 500
+//#define BLOCK 100
+#define BLOCK 500
 
 #define MAXRECORD ((BLOCK/20)-1)
-//ORDER
+//Order
 #define order (int)((((BLOCK+4)/12))-2)
 
 // 1 row/record = 20 byte
@@ -19,13 +18,11 @@ typedef struct record {
    char  title[12] ;    // 12 btye
 } Record;
 
-
 struct Blocks {
     Record records[MAXRECORD];    // MAXRECORD*20 btye
     struct Blocks * next;         // 8 byte
     int size;                     // 4 btye
 };
-
 
 typedef struct link_list_head{
     struct link_list *head;
@@ -36,8 +33,6 @@ typedef struct link_list{
     Record *ptr;
 	struct link_list *nextItem;
 }link_list;
-
-
 
 typedef struct node {
     void ** pointers;               // 8*order btye
@@ -57,8 +52,6 @@ node * queue = NULL;
 bool verbose_output = false;
 node *root = NULL;
 int numberR = 0;
-
-
 
 int height(node * const root) {
 	int h = 0;
@@ -103,9 +96,7 @@ node * make_leaf(void) {
 	return leaf;
 }
 
-/* First insertion:
- * start a new tree.
- */
+/* First insertion: start a new tree. */
 node *start_new_tree(float key, link_list *pointer) {
 	node * root = make_leaf();
 	root->keys[0] = key;
@@ -368,10 +359,6 @@ node * insert_into_parent(node * root, node * left, float key, node * right) {
 	return insert_into_node_after_splitting(root, parent, left_index, key, right);
 }
 
-
-
-
-
 /* Inserts a new key and pointer
  * to a new record into a leaf so as to exceed
  * the tree's order, causing the leaf to be split
@@ -443,7 +430,6 @@ node * insert_into_leaf_after_splitting(node * root, node * leaf, float key, lin
 
 	return insert_into_parent(root, leaf, new_key, new_leaf);
 }
-
 
 /* Utility function to give the length in edges
  * of the path from any node to the root.
@@ -1324,20 +1310,8 @@ node * deleteIndex(node * root, float key,int *numOfAccess) {
 }
 
 
-
-
 int main() {
-    /*int choice = 0;
-    printf("1. 100 B");
-    prinft("2. 500 B");
-    printf("Enter choice of Block Size: ");
 
-    if (choice == 1 || choice == 100)
-        blockchoice = 1;
-    else
-        blockchoice = 2;
-
-    if (choice == 1 || choice == 2 || choice == 100 || choice == 500) {*/
     char line[256];
     FILE * fp;
     const char s[2] = "\t";
@@ -1385,7 +1359,7 @@ int main() {
     printf("\n          DATABASE STATISTICS     \n");
     printf("+------------------------------------+\n");
     printf("| Size of a Block      : %d Btye    |\n",BLOCK);
-    printf("| The Size of Database : %d Mb     |\n",  (sizeOfDb+sizeOfIndex+sizeOfLinklist)/100000 );
+    printf("| The Size of Database : %d Mb      |\n",  (sizeOfDb+sizeOfIndex+sizeOfLinklist)/100000 );
     printf("| Number of Blocks     : %d\t     |\n",NumberOfBlock);
     printf("| Number of Records    : %d     |\n",numberR);
     printf("+------------------------------------+\n\n");
@@ -1405,8 +1379,6 @@ int main() {
     printf("+-----------------------------------------------------------+\n");
     print_tree(root,true,&numberOfNode);
     printf("\n+-----------------------------------------------------------+\n");
-
-
 
     //Retrieve for a single key
     //Hard Code searching for key value 8 -> can change to let user type the value
@@ -1452,13 +1424,9 @@ int main() {
     }
     printf("\n");
     printf("+-----------+-----------+-----------+-----------+-----------+\n");
-    printf("|           Data Block Content ((First 10 Accessed)         |\n");
+    printf("|           Data Block Content (First 10 Accessed)         |\n");
     printf("+------------+--------+-------+------------+--------+-------+\n");
     calculateblockAccess(llhead,head,true,Key);
-
-
-
-
 
 
     printf("\n\n             RANGE OF KEY SEARCH STATISTICS  \n");
@@ -1491,8 +1459,6 @@ int main() {
     numOfAccess = 0 ;
     blockaccess = 0;
 
-
-
     printf("\n\n    DELETE RECORD STATISTICS\n");
     printf("+-----------------------------------+\n");
     numOfAccess = 0 ;
@@ -1506,7 +1472,6 @@ int main() {
     printf("\n+-----------------------------------------------------------+\n");
 
     printf("\n\n      --END--\n");
-
 }
 
 
