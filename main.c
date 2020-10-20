@@ -4,8 +4,8 @@
 #include <string.h>
 
 //CHANGE BLOCK SIZE HERE
-//#define BLOCK 100
-#define BLOCK 500
+//#define BLOCK 500
+#define BLOCK 100
 
 #define MAXRECORD ((BLOCK/20)-1)
 //Order
@@ -13,9 +13,9 @@
 
 // 1 row/record = 20 byte
 typedef struct record {
+   char  title[12] ;    // 12 btye
    float rating ;       // 4 btye
    int   vote ;         // 4 btye
-   char  title[12] ;    // 12 btye
 } Record;
 
 struct Blocks {
@@ -1138,6 +1138,7 @@ int main() {
     printf("\n\n    DELETE RECORD STATISTICS\n");
     printf("+-----------------------------------+\n");
     numOfAccess = 0 ;
+    deleteIndex(root,7,&numOfAccess);
     printf("| Number of Index Node Deleted : %d  |\n",numOfAccess);
     h = height(root);
     printf("| Height of B+ Tree            : %d  |\n", h);
